@@ -1,0 +1,279 @@
+:root {
+  color-scheme: dark;
+  --bg: #101418;
+  --panel: #151b20;
+  --panel-2: #1d252b;
+  --line: #33424c;
+  --text: #eef5f7;
+  --muted: #9eadb7;
+  --good: #32d58a;
+  --warn: #f1c94c;
+  --hot: #ff6255;
+  --skill: #50bcff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    linear-gradient(180deg, rgba(75, 132, 178, 0.18), transparent 42%),
+    linear-gradient(135deg, #0f1419, #171d22 52%, #101317);
+  color: var(--text);
+  font-family: "Segoe UI", "Microsoft JhengHei", system-ui, sans-serif;
+}
+
+button {
+  font: inherit;
+}
+
+.shell {
+  width: min(1260px, calc(100vw - 28px));
+  min-height: 100vh;
+  margin: 0 auto;
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 12px;
+  align-content: start;
+  padding: 18px 0;
+}
+
+.stage,
+.bottom-hud {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(18, 23, 28, 0.92);
+  box-shadow: 0 22px 72px rgba(0, 0, 0, 0.34);
+}
+
+.stage {
+  overflow: hidden;
+}
+
+canvas {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  display: block;
+  background: #11171d;
+}
+
+.bottom-hud {
+  min-height: 168px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1fr) 190px;
+  gap: 14px;
+  align-items: stretch;
+}
+
+.status-panel,
+.hand-panel,
+.legend {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(29, 37, 43, 0.82);
+}
+
+.status-panel {
+  padding: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.class-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.class-panel > span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.class-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.class-button {
+  min-height: 34px;
+  border: 1px solid #46545f;
+  border-radius: 7px;
+  background: #202930;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.class-button.active {
+  border-color: var(--warn);
+  background: #3a3330;
+  color: var(--text);
+}
+
+.class-button:hover {
+  background: #2b363f;
+  color: var(--text);
+}
+
+.meter-label,
+.hand-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.meter-label span,
+.stats span,
+.legend span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.meter-label strong {
+  color: var(--warn);
+}
+
+.meter {
+  height: 16px;
+  overflow: hidden;
+  margin-top: 8px;
+  border: 1px solid #4b5761;
+  border-radius: 999px;
+  background: #0c0f12;
+}
+
+.meter-fill {
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--warn), var(--good));
+  transition: width 120ms linear;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.stats div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #202930;
+}
+
+.stats strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 23px;
+}
+
+.hand-panel {
+  padding: 12px;
+}
+
+.hand-header {
+  margin-bottom: 10px;
+}
+
+.hand-header h1 {
+  margin: 0;
+  font-size: 17px;
+}
+
+#restart {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid #46545f;
+  border-radius: 7px;
+  background: #26313a;
+  color: var(--text);
+  cursor: pointer;
+}
+
+#restart:hover {
+  background: #303c45;
+}
+
+.hand {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.card,
+.card-slot {
+  width: 100%;
+  height: 104px;
+  border-radius: 8px;
+}
+
+.card {
+  padding: 10px;
+  border: 1px solid #4a728c;
+  background: linear-gradient(145deg, #21313a, #172229);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.card:hover,
+.card:focus-visible {
+  outline: 2px solid var(--skill);
+  outline-offset: 2px;
+}
+
+.card strong {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 7px;
+  color: #d8f0ff;
+  font-size: 15px;
+}
+
+.card small {
+  color: #93d8ff;
+  font-size: 12px;
+}
+
+.card span {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.42;
+}
+
+.card-slot {
+  display: grid;
+  place-items: center;
+  border: 1px dashed #46535d;
+  color: #6f7d86;
+  font-size: 13px;
+}
+
+.legend {
+  padding: 12px;
+  display: grid;
+  align-content: center;
+  gap: 9px;
+}
+
+@media (max-width: 900px) {
+  .bottom-hud {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pulse Deck Prototype</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="stage" aria-label="battle field">
+        <canvas id="game" width="1152" height="648"></canvas>
+      </section>
+
+      <section class="bottom-hud" aria-label="battle controls">
+        <div class="status-panel">
+          <div class="class-panel" aria-label="class select">
+            <span>職業</span>
+            <div class="class-buttons">
+              <button class="class-button active" type="button" data-class="adept">脈衝使</button>
+              <button class="class-button" type="button" data-class="swordsman">劍客</button>
+              <button class="class-button" type="button" data-class="boxer">拳師</button>
+            </div>
+          </div>
+
+          <div class="meter-block">
+            <div class="meter-label">
+              <span>氣條</span>
+              <strong id="chargeText">0%</strong>
+            </div>
+            <div class="meter">
+              <div id="chargeFill" class="meter-fill"></div>
+            </div>
+          </div>
+
+          <div class="stats">
+            <div>
+              <span>玩家</span>
+              <strong id="playerHp">100</strong>
+            </div>
+            <div>
+              <span>敵人</span>
+              <strong id="enemyHp">160</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="hand-panel">
+          <div class="hand-header">
+            <h1>技能手牌</h1>
+            <button id="restart" type="button">重新開始</button>
+          </div>
+          <div id="hand" class="hand" aria-live="polite"></div>
+        </div>
+
+        <div class="legend">
+          <span>移動 WASD / 方向鍵</span>
+          <span>普攻 J / Space</span>
+          <span>技能 1-4 / 點擊卡牌</span>
+          <span>劍客：劍氣浮空後接攻擊可加倍擊飛</span>
+          <span>拳師：推拉控位後定身，再打爆發</span>
+        </div>
+      </section>
+    </main>
+
+    <script src="game.js"></script>
+  </body>
+</html>
