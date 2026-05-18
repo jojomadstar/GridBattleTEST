@@ -51,6 +51,7 @@ button {
 
 .stage {
   overflow: hidden;
+  touch-action: none;
 }
 
 canvas {
@@ -266,7 +267,36 @@ canvas {
 }
 
 .legend {
+  overflow: hidden;
+}
+
+.legend summary {
+  min-height: 44px;
   padding: 12px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--text);
+  list-style: none;
+}
+
+.legend summary::-webkit-details-marker {
+  display: none;
+}
+
+.legend summary::after {
+  content: "+";
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 20px;
+}
+
+.legend[open] summary::after {
+  content: "-";
+}
+
+.legend-content {
+  padding: 0 12px 12px;
   display: grid;
   align-content: center;
   gap: 9px;
@@ -276,4 +306,27 @@ canvas {
   .bottom-hud {
     grid-template-columns: 1fr;
   }
+
+  .shell {
+    width: min(100%, calc(100vw - 16px));
+    padding: 8px 0;
+  }
+
+  .bottom-hud {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .card,
+  .card-slot {
+    height: 106px;
+  }
+}
+
+body.mobile-input canvas {
+  touch-action: none;
+}
+
+body.mobile-input .card {
+  -webkit-tap-highlight-color: transparent;
 }

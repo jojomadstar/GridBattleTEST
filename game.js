@@ -8,6 +8,7 @@ const enemyHpText = document.querySelector("#enemyHp");
 const handEl = document.querySelector("#hand");
 const restartButton = document.querySelector("#restart");
 const classButtons = [...document.querySelectorAll(".class-button")];
+const mobileInputQuery = window.matchMedia("(pointer: coarse)");
 
 const COLS_PER_SIDE = 4;
 const ROWS = 4;
@@ -31,6 +32,8 @@ const keys = new Set();
 let selectedClass = "adept";
 let lastTime = performance.now();
 let state;
+let touchStart = null;
+let mobileInputEnabled = detectMobileInput();
 
 const classes = {
   adept: {
@@ -750,6 +753,50 @@ function movePlayer(dx, dy) {
   state.player.moveCooldown = 0.13;
 }
 
+function detectMobileInput() {
+  return mobileInputQuery.matches || navigator.maxTouchPoints > 0;
+}
+
+function syncInputMode() {
+  mobileInputEnabled = detectMobileInput();
+  document.body.classList.toggle("mobile-input", mobileInputEnabled);
+}
+
+function handleBoardPointerDown(event) {
+  if (!mobileInputEnabled || event.pointerType === "mouse") return;
+  touchStart = {
+    id: event.pointerId,
+    x: event.clientX,
+    y: event.clientY
+  };
+  canvas.setPointerCapture(event.pointerId);
+}
+
+function handleBoardPointerUp(event) {
+  if (!touchStart || touchStart.id !== event.pointerId) return;
+
+  const dx = event.clientX - touchStart.x;
+  const dy = event.clientY - touchStart.y;
+  const distance = Math.hypot(dx, dy);
+  const swipeThreshold = 28;
+
+  if (distance < swipeThreshold) {
+    playerBasicAttack();
+  } else if (Math.abs(dx) > Math.abs(dy)) {
+    movePlayer(dx > 0 ? 1 : -1, 0);
+  } else {
+    movePlayer(0, dy > 0 ? 1 : -1);
+  }
+
+  touchStart = null;
+}
+
+function cancelBoardPointer(event) {
+  if (touchStart && touchStart.id === event.pointerId) {
+    touchStart = null;
+  }
+}
+
 function updateInput() {
   if (keys.has("arrowleft") || keys.has("a")) movePlayer(-1, 0);
   if (keys.has("arrowright") || keys.has("d")) movePlayer(1, 0);
@@ -1411,6 +1458,10 @@ window.addEventListener("keyup", (event) => {
 });
 
 restartButton.addEventListener("click", restartGame);
+canvas.addEventListener("pointerdown", handleBoardPointerDown);
+canvas.addEventListener("pointerup", handleBoardPointerUp);
+canvas.addEventListener("pointercancel", cancelBoardPointer);
+mobileInputQuery.addEventListener("change", syncInputMode);
 
 classButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -1422,4 +1473,5 @@ classButtons.forEach((button) => {
 renderHand();
 syncHud();
 syncClassButtons();
+syncInputMode();
 requestAnimationFrame(loop);
