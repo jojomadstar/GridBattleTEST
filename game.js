@@ -13,10 +13,6 @@ const mobileInputQuery = window.matchMedia("(pointer: coarse)");
 const COLS_PER_SIDE = 4;
 const ROWS = 4;
 const HAND_SIZE = 4;
-const TILE_W = 100;
-const TILE_H = 55;
-const GRID_X = 128;
-const GRID_Y = 206;
 const BOARD_TOP_LEFT = { x: 192, y: 206 };
 const BOARD_TOP_RIGHT = { x: 944, y: 206 };
 const BOARD_BOTTOM_LEFT = { x: 112, y: 458 };
@@ -34,6 +30,47 @@ let lastTime = performance.now();
 let state;
 let touchStart = null;
 let mobileInputEnabled = detectMobileInput();
+let paused = false;
+const lastHudCache = { charge: -1, playerHp: -1, playerShield: -1, enemyHp: -1 };
+let audioCtx = null;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  return audioCtx;
+}
+
+function playTone(freq, dur, type = "square", vol = 0.12) {
+  try {
+    const ac = getAudioCtx();
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.connect(gain);
+    gain.connect(ac.destination);
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(vol, ac.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + dur);
+    osc.start();
+    osc.stop(ac.currentTime + dur);
+  } catch (_) {}
+}
+
+function sfxBasicHit()  { playTone(380, 0.07, "square", 0.10); }
+function sfxSkillHit()  { playTone(520, 0.13, "sawtooth", 0.13); }
+function sfxComboHit()  {
+  playTone(200, 0.25, "sawtooth", 0.16);
+  setTimeout(() => playTone(360, 0.18, "sawtooth", 0.12), 50);
+}
+function sfxTakeDmg()   { playTone(150, 0.17, "sawtooth", 0.15); }
+function sfxDrawCard()  { playTone(900, 0.10, "sine", 0.07); }
+function sfxVictory()   {
+  [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playTone(f, 0.2, "sine", 0.12), i * 130));
+}
+function sfxDefeat()    {
+  [330, 277, 220, 165].forEach((f, i) => setTimeout(() => playTone(f, 0.22, "sawtooth", 0.12), i * 150));
+}
+function sfxPause()     { playTone(440, 0.09, "sine", 0.07); }
 
 const classes = {
   adept: {
@@ -622,6 +659,7 @@ function drawCard() {
   const card = deck[Math.floor(Math.random() * deck.length)];
   state.player.hand[slot] = card;
   state.message = `抽到 ${card.name}，放入第 ${slot + 1} 格`;
+  sfxDrawCard();
   renderHand();
 }
 
@@ -635,6 +673,11 @@ function gainCharge(amount) {
 
 function hitEnemyWithSkill(baseDamage, options = {}) {
   const combo = options.combo && state.enemy.airborne > 0;
+  if (state.phase === "playing") {
+    if (combo) sfxComboHit();
+    else if (options.kind === "basic") sfxBasicHit();
+    else sfxSkillHit();
+  }
   const resolved = applyEnemyDamage(combo ? baseDamage * 2 : baseDamage, {
     kind: options.kind || "skill",
     big: options.big || combo,
@@ -683,10 +726,8 @@ function castCard(index) {
   const card = state.player.hand[index];
   if (!card) return;
   state.player.hand[index] = null;
+  state.message = `施放 ${card.name}`;
   card.cast(state);
-  if (card.id !== "sword-qi" && !state.message.includes("擊飛聯招") && !state.message.includes("浮空")) {
-    state.message = `施放 ${card.name}`;
-  }
   renderHand();
 }
 
@@ -702,9 +743,10 @@ function applyEnemyDamage(baseDamage, { kind = "skill", forceCrit = false, big =
   state.enemy.hp = Math.max(0, state.enemy.hp - damage);
   const pos = cellCenter("enemy", state.enemy.col, state.enemy.row);
   addDamageNumber(pos.x, pos.y - 72, damage, { kind, big: big || crit });
-  if (state.enemy.hp <= 0) {
+  if (state.enemy.hp <= 0 && state.phase === "playing") {
     state.phase = "win";
     state.message = "勝利：模板完成，可以開始加關卡與卡池";
+    sfxVictory();
   }
   return { damage, crit };
 }
@@ -733,6 +775,7 @@ function damagePlayer(amount) {
     state.message = "月弧返斬成功：抵銷傷害並反擊";
     return;
   }
+  sfxTakeDmg();
   const blocked = Math.min(state.player.shield, amount);
   state.player.shield -= blocked;
   state.player.hp = Math.max(0, state.player.hp - (amount - blocked));
@@ -740,6 +783,7 @@ function damagePlayer(amount) {
   if (state.player.hp <= 0) {
     state.phase = "lose";
     state.message = "戰敗：按重新開始再試一次";
+    sfxDefeat();
   }
 }
 
@@ -763,7 +807,7 @@ function syncInputMode() {
 }
 
 function handleBoardPointerDown(event) {
-  if (!mobileInputEnabled || event.pointerType === "mouse") return;
+  if (!mobileInputEnabled || event.pointerType === "mouse" || paused) return;
   touchStart = {
     id: event.pointerId,
     x: event.clientX,
@@ -778,7 +822,7 @@ function handleBoardPointerUp(event) {
   const dx = event.clientX - touchStart.x;
   const dy = event.clientY - touchStart.y;
   const distance = Math.hypot(dx, dy);
-  const swipeThreshold = 28;
+  const swipeThreshold = 40;
 
   if (distance < swipeThreshold) {
     playerBasicAttack();
@@ -798,6 +842,7 @@ function cancelBoardPointer(event) {
 }
 
 function updateInput() {
+  if (paused) return;
   if (keys.has("arrowleft") || keys.has("a")) movePlayer(-1, 0);
   if (keys.has("arrowright") || keys.has("d")) movePlayer(1, 0);
   if (keys.has("arrowup") || keys.has("w")) movePlayer(0, -1);
@@ -944,6 +989,7 @@ function updateProjectiles(dt) {
       const enemyCenter = cellCenter("enemy", state.enemy.col, state.enemy.row);
       if (Math.hypot(projectile.x - enemyCenter.x, projectile.y - (enemyCenter.y - 18)) < 35) {
         projectile.dead = true;
+        if (projectile.hitKind === "skill") sfxSkillHit(); else sfxBasicHit();
         applyEnemyDamage(projectile.damage, { kind: projectile.hitKind || "basic" });
         if (projectile.chargeOnHit) gainCharge(projectile.chargeOnHit);
         if (projectile.onHit) projectile.onHit();
@@ -1375,6 +1421,18 @@ function drawText() {
     ctx.fillText("按下方重新開始", canvas.width / 2, 334);
     ctx.textAlign = "left";
   }
+  if (paused) {
+    ctx.fillStyle = "rgba(10, 12, 14, 0.78)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#eef5f7";
+    ctx.font = "800 52px Segoe UI, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("PAUSED", canvas.width / 2, 292);
+    ctx.font = "18px Segoe UI, sans-serif";
+    ctx.fillStyle = "#c6d3da";
+    ctx.fillText("按 P 或 Escape 繼續", canvas.width / 2, 334);
+    ctx.textAlign = "left";
+  }
 }
 
 function render() {
@@ -1392,12 +1450,22 @@ function render() {
 
 function syncHud() {
   const chargePercent = Math.round(state.player.charge);
-  chargeFill.style.width = `${chargePercent}%`;
-  chargeText.textContent = `${chargePercent}%`;
-  playerHpText.textContent = state.player.shield > 0
-    ? `${state.player.hp} +${state.player.shield}`
-    : String(state.player.hp);
-  enemyHpText.textContent = String(state.enemy.hp);
+  if (chargePercent !== lastHudCache.charge) {
+    chargeFill.style.width = `${chargePercent}%`;
+    chargeText.textContent = `${chargePercent}%`;
+    lastHudCache.charge = chargePercent;
+  }
+  const hp = state.player.hp;
+  const shield = state.player.shield;
+  if (hp !== lastHudCache.playerHp || shield !== lastHudCache.playerShield) {
+    playerHpText.textContent = shield > 0 ? `${hp} +${shield}` : String(hp);
+    lastHudCache.playerHp = hp;
+    lastHudCache.playerShield = shield;
+  }
+  if (state.enemy.hp !== lastHudCache.enemyHp) {
+    enemyHpText.textContent = String(state.enemy.hp);
+    lastHudCache.enemyHp = state.enemy.hp;
+  }
 }
 
 function renderHand() {
@@ -1425,8 +1493,19 @@ function syncClassButtons() {
   });
 }
 
+function togglePause() {
+  if (state.phase !== "playing") return;
+  paused = !paused;
+  sfxPause();
+}
+
 function restartGame() {
   state = createInitialState();
+  paused = false;
+  lastHudCache.charge = -1;
+  lastHudCache.playerHp = -1;
+  lastHudCache.playerShield = -1;
+  lastHudCache.enemyHp = -1;
   renderHand();
   syncHud();
   syncClassButtons();
@@ -1435,7 +1514,7 @@ function restartGame() {
 function loop(now) {
   const dt = Math.min(0.033, (now - lastTime) / 1000);
   lastTime = now;
-  update(dt);
+  if (!paused) update(dt);
   render();
   requestAnimationFrame(loop);
 }
@@ -1446,6 +1525,8 @@ window.addEventListener("keydown", (event) => {
     event.preventDefault();
   }
   keys.add(key);
+  if (key === "p" || key === "escape") { togglePause(); return; }
+  if (paused) return;
   if (key === "j" || key === " ") playerBasicAttack();
   if (key === "1") castCard(0);
   if (key === "2") castCard(1);
