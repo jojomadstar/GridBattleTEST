@@ -253,6 +253,7 @@ const classes = {
       });
       if (target.side === "enemy" && game.enemy.col === target.col && game.enemy.row === targetRow) {
         hitEnemyWithSkill(14, { charge: 42, color: "#f1c94c", kind: "basic" });
+        addSwordHitEffect();
         game.message = "劍客普攻命中第四格，氣條大幅上升";
       } else {
         game.message = "劍客普攻揮空：只有命中才會集氣";
@@ -387,6 +388,7 @@ const classes = {
       });
       if (enemyOnCell(aim)) {
         hitEnemyWithSkill(16, { charge: 34, color: "#ff9f43", kind: "basic" });
+        addPunchHitEffect();
         game.message = "拳師普攻命中準心";
       } else {
         game.message = "拳師普攻揮空：先把敵人控進準心";
@@ -589,6 +591,30 @@ function addBurst(x, y, color, duration = 0.2) {
   state.effects.push({ kind: "burst", x, y, color, time: duration, duration });
 }
 
+function addSwordHitEffect() {
+  const pos = cellCenter("enemy", state.enemy.col, state.enemy.row);
+  state.effects.push({
+    kind: "swordHit",
+    x: pos.x,
+    y: pos.y - 24,
+    color: "#fdf3b0",
+    time: 0.24,
+    duration: 0.24
+  });
+}
+
+function addPunchHitEffect() {
+  const pos = cellCenter("enemy", state.enemy.col, state.enemy.row);
+  state.effects.push({
+    kind: "punchHit",
+    x: pos.x,
+    y: pos.y - 24,
+    color: "#ffb35c",
+    time: 0.22,
+    duration: 0.22
+  });
+}
+
 function addSlashEffect(rows, col, width, color, side = "enemy") {
   state.effects.push({
     kind: "slash",
@@ -657,7 +683,20 @@ function drawCard() {
     return;
   }
   const deck = classes[selectedClass].deck;
-  const card = deck[Math.floor(Math.random() * deck.length)];
+  const weights = deck.map((card) => {
+    const copies = state.player.hand.filter((held) => held && held.id === card.id).length;
+    return copies >= 2 ? 0.35 : 1;
+  });
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+  let roll = Math.random() * totalWeight;
+  let card = deck[deck.length - 1];
+  for (let i = 0; i < deck.length; i += 1) {
+    roll -= weights[i];
+    if (roll <= 0) {
+      card = deck[i];
+      break;
+    }
+  }
   state.player.hand[slot] = card;
   state.message = `抽到 ${card.name}，放入第 ${slot + 1} 格`;
   sfxDrawCard();
@@ -1241,6 +1280,52 @@ function drawEffects() {
       ctx.arc(effect.x, effect.y, 18 + progress * 42, 0, Math.PI * 2);
       ctx.stroke();
       ctx.globalAlpha = 1;
+    }
+    if (effect.kind === "swordHit") {
+      const reach = 30 + progress * 26;
+      ctx.save();
+      ctx.translate(effect.x, effect.y);
+      ctx.globalAlpha = 1 - progress;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = effect.color;
+      ctx.lineWidth = 6 - progress * 3;
+      ctx.beginPath();
+      ctx.moveTo(-reach, -reach * 0.7);
+      ctx.lineTo(reach, reach * 0.7);
+      ctx.moveTo(-reach, reach * 0.7);
+      ctx.lineTo(reach, -reach * 0.7);
+      ctx.stroke();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-reach * 0.7, -reach * 0.5);
+      ctx.lineTo(reach * 0.7, reach * 0.5);
+      ctx.stroke();
+      ctx.restore();
+    }
+    if (effect.kind === "punchHit") {
+      const spikes = 8;
+      const inner = 10 + progress * 6;
+      const outer = 26 + progress * 18;
+      ctx.save();
+      ctx.translate(effect.x, effect.y);
+      ctx.globalAlpha = 1 - progress;
+      ctx.fillStyle = effect.color;
+      ctx.strokeStyle = "#fff1d6";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i < spikes * 2; i += 1) {
+        const radius = i % 2 === 0 ? outer : inner;
+        const angle = (Math.PI * i) / spikes + 0.4;
+        const px = Math.cos(angle) * radius;
+        const py = Math.sin(angle) * radius;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
     }
     if (effect.kind === "slash") {
       ctx.fillStyle = `${effect.color}55`;
