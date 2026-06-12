@@ -191,7 +191,13 @@ canvas {
   font-size: 17px;
 }
 
-#restart {
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+#restart,
+#pause {
   min-height: 32px;
   padding: 0 12px;
   border: 1px solid #46545f;
@@ -201,8 +207,14 @@ canvas {
   cursor: pointer;
 }
 
-#restart:hover {
+#restart:hover,
+#pause:hover {
   background: #303c45;
+}
+
+#pause.active {
+  border-color: var(--warn);
+  background: #3a3330;
 }
 
 .hand {

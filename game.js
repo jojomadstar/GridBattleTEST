@@ -7,6 +7,7 @@ const playerHpText = document.querySelector("#playerHp");
 const enemyHpText = document.querySelector("#enemyHp");
 const handEl = document.querySelector("#hand");
 const restartButton = document.querySelector("#restart");
+const pauseButton = document.querySelector("#pause");
 const classButtons = [...document.querySelectorAll(".class-button")];
 const mobileInputQuery = window.matchMedia("(pointer: coarse)");
 
@@ -716,13 +717,13 @@ function hitEnemyWithSkill(baseDamage, options = {}) {
 }
 
 function playerBasicAttack() {
-  if (state.phase !== "playing" || state.player.attackCooldown > 0) return;
+  if (paused || state.phase !== "playing" || state.player.attackCooldown > 0) return;
   state.player.attackCooldown = selectedClass === "swordsman" ? 0.28 : 0.34;
   classes[selectedClass].basicAttack(state);
 }
 
 function castCard(index) {
-  if (state.phase !== "playing") return;
+  if (paused || state.phase !== "playing") return;
   const card = state.player.hand[index];
   if (!card) return;
   state.player.hand[index] = null;
@@ -1481,10 +1482,17 @@ function renderHand() {
     const button = document.createElement("button");
     button.className = "card";
     button.type = "button";
+    button.disabled = paused;
     button.innerHTML = `<strong>${index + 1}. ${card.name}<small>${card.tag}</small></strong><span>${card.description}</span>`;
     button.addEventListener("click", () => castCard(index));
     handEl.append(button);
   });
+}
+
+function syncPauseButton() {
+  pauseButton.textContent = paused ? "繼續" : "暫停";
+  pauseButton.classList.toggle("active", paused);
+  pauseButton.setAttribute("aria-pressed", String(paused));
 }
 
 function syncClassButtons() {
@@ -1497,6 +1505,8 @@ function togglePause() {
   if (state.phase !== "playing") return;
   paused = !paused;
   sfxPause();
+  syncPauseButton();
+  renderHand();
 }
 
 function restartGame() {
@@ -1509,6 +1519,7 @@ function restartGame() {
   renderHand();
   syncHud();
   syncClassButtons();
+  syncPauseButton();
 }
 
 function loop(now) {
@@ -1539,6 +1550,7 @@ window.addEventListener("keyup", (event) => {
 });
 
 restartButton.addEventListener("click", restartGame);
+pauseButton.addEventListener("click", togglePause);
 canvas.addEventListener("pointerdown", handleBoardPointerDown);
 canvas.addEventListener("pointerup", handleBoardPointerUp);
 canvas.addEventListener("pointercancel", cancelBoardPointer);
@@ -1554,5 +1566,6 @@ classButtons.forEach((button) => {
 renderHand();
 syncHud();
 syncClassButtons();
+syncPauseButton();
 syncInputMode();
 requestAnimationFrame(loop);
