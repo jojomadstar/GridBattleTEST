@@ -89,6 +89,7 @@ const classes = {
         id: "bolt",
         name: "脈衝彈",
         tag: "直線",
+        tone: "damage",
         description: "沿同一列射出高速能量，命中造成 32 傷害。",
         cast(game) {
           const origin = cellCenter("player", game.player.col, game.player.row);
@@ -109,6 +110,7 @@ const classes = {
         id: "slash",
         name: "裂隙斬",
         tag: "近距",
+        tone: "control",
         description: "攻擊敵方前兩格，造成 44 傷害並短暫定身。",
         cast(game) {
           const rows = [game.player.row - 1, game.player.row, game.player.row + 1];
@@ -135,6 +137,7 @@ const classes = {
         id: "flare",
         name: "熱核落點",
         tag: "範圍",
+        tone: "damage",
         description: "鎖定敵人所在格，短暫延遲後爆炸造成 56 傷害。",
         cast(game) {
           game.effects.push({
@@ -180,6 +183,7 @@ const classes = {
         id: "sword-qi",
         name: "流光劍氣",
         tag: "直線",
+        tone: "airborne",
         description: "瞬間掃過整列的劍氣，造成 24 傷害並使敵人浮空 1 秒。",
         cast(game) {
           const row = game.player.row;
@@ -207,6 +211,7 @@ const classes = {
         id: "cross-cut",
         name: "斷雲橫砍",
         tag: "豎三格",
+        tone: "damage",
         description: "以目前準心為中心砍擊豎三格，浮空中命中會傷害加倍並擊飛。",
         cast(game) {
           const aim = swordsmanAimCell();
@@ -221,6 +226,7 @@ const classes = {
         id: "thrust",
         name: "追風突刺",
         tag: "穿刺",
+        tone: "control",
         description: "突刺準心格與其左側一格，造成 28 傷害並定身 4 秒。",
         cast(game) {
           const aim = swordsmanAimCell();
@@ -277,6 +283,7 @@ const classes = {
         id: "driving-palm",
         name: "震山推掌",
         tag: "推",
+        tone: "control",
         description: "以準心為中心攻擊 2x3 區域，造成 18 傷害、緩速並把敵人往後推 1 格。",
         cast(game) {
           const aim = combatAimCell();
@@ -294,6 +301,7 @@ const classes = {
         id: "dragon-pull",
         name: "擒龍勁",
         tag: "拉",
+        tone: "control",
         description: "以準心為中心攻擊 2x3 區域，造成 14 傷害、緩速並把敵人拉近 1 格。",
         cast(game) {
           const aim = combatAimCell();
@@ -311,6 +319,7 @@ const classes = {
         id: "meridian-lock",
         name: "鎖脈震擊",
         tag: "定身",
+        tone: "control",
         description: "攻擊準心格與左側一格，造成 20 傷害並定身 4 秒。",
         cast(game) {
           const aim = combatAimCell();
@@ -327,6 +336,7 @@ const classes = {
         id: "hundred-fist",
         name: "百裂崩拳",
         tag: "爆發",
+        tone: "damage",
         description: "只打準心格；引導 1.6 秒，持續命中，最後一擊造成大傷害。",
         cast(game) {
           const aim = combatAimCell();
@@ -348,6 +358,7 @@ const classes = {
         id: "breathing",
         name: "運氣調息",
         tag: "抽牌",
+        tone: "draw",
         description: "直接抽兩張新卡，補充拳路。",
         cast(game) {
           drawCard();
@@ -359,6 +370,7 @@ const classes = {
         id: "dragon-regret",
         name: "亢龍有悔",
         tag: "大招",
+        tone: "damage",
         description: "引導 2 秒後，以準心欄位為中心打出十字範圍重擊。",
         cast(game) {
           const aim = combatAimCell();
@@ -1960,8 +1972,22 @@ function drawProjectiles() {
   }
 }
 
-function drawEffects() {
+const FOREGROUND_EFFECT_KINDS = new Set([
+  "burst",
+  "teleportRift",
+  "meleeCleave",
+  "interruptMark",
+  "swordHit",
+  "punchHit",
+  "swordWave",
+  "damageNumber",
+  "knockback"
+]);
+
+function drawEffects(layer = "under") {
   for (const effect of state.effects) {
+    const isForeground = FOREGROUND_EFFECT_KINDS.has(effect.kind);
+    if ((layer === "over") !== isForeground) continue;
     const progress = 1 - effect.time / effect.duration;
     if (effect.kind === "burst") {
       ctx.strokeStyle = effect.color;
@@ -2314,11 +2340,12 @@ function render() {
   drawGrid("player");
   drawGrid("enemy");
   drawSwordsmanAim();
-  drawEffects();
+  drawEffects("under");
   drawTeleportStrikeWarning();
   drawUnit(state.player, "player", classes[selectedClass].color);
   drawUnit(state.enemy, "enemy", "#ff6255");
   drawProjectiles();
+  drawEffects("over");
   drawText();
 }
 
@@ -2360,6 +2387,7 @@ function renderHand() {
     button.disabled = paused || state.phase !== "playing";
     button.dataset.class = selectedClass;
     button.dataset.card = card.id;
+    button.dataset.tone = card.tone || "utility";
     button.setAttribute("aria-label", `第 ${index + 1} 格，${card.name}，${card.tag}`);
     button.innerHTML = `<strong>${index + 1}. ${card.name}<small>${card.tag}</small></strong><span>${card.description}</span>`;
     button.addEventListener("click", () => castCard(index));

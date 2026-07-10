@@ -286,17 +286,55 @@ canvas {
 }
 
 .card {
+  --card-accent: var(--class-accent);
+  --card-soft: var(--class-soft);
   position: relative;
   overflow: hidden;
   padding: 10px;
   border: 1px solid #45535c;
-  border-top: 3px solid var(--class-accent);
+  border-top: 3px solid var(--card-accent);
   background:
-    linear-gradient(155deg, color-mix(in srgb, var(--class-soft) 72%, #1a2228), #11171c 68%);
+    linear-gradient(155deg, color-mix(in srgb, var(--card-soft) 72%, #1a2228), #11171c 68%);
   color: var(--text);
   text-align: left;
   cursor: pointer;
   transition: transform 130ms ease, border-color 130ms ease, filter 130ms ease;
+}
+
+.card[data-tone="airborne"] {
+  --card-accent: #51baff;
+  --card-soft: #17344a;
+}
+
+.card[data-tone="control"] {
+  --card-accent: #efc94f;
+  --card-soft: #3c321a;
+}
+
+.card[data-tone="damage"] {
+  --card-accent: #f05e59;
+  --card-soft: #421e24;
+}
+
+.card[data-tone="draw"] {
+  --card-accent: #f1f5f3;
+  --card-soft: #364047;
+}
+
+.card[data-tone="utility"] {
+  --card-accent: #6fd39a;
+  --card-soft: #19352a;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--card-accent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--card-accent) 55%, transparent);
 }
 
 .card::after {
@@ -306,14 +344,14 @@ canvas {
   bottom: -34px;
   width: 78px;
   height: 78px;
-  border: 1px solid color-mix(in srgb, var(--class-accent) 35%, transparent);
+  border: 1px solid color-mix(in srgb, var(--card-accent) 35%, transparent);
   transform: rotate(45deg);
 }
 
 .card:hover,
 .card:focus-visible {
   outline: 0;
-  border-color: var(--class-accent);
+  border-color: var(--card-accent);
   transform: translateY(-2px);
   filter: brightness(1.1);
 }
@@ -336,9 +374,9 @@ canvas {
 
 .card small {
   padding: 2px 5px;
-  border: 1px solid color-mix(in srgb, var(--class-accent) 55%, #35434c);
+  border: 1px solid color-mix(in srgb, var(--card-accent) 55%, #35434c);
   border-radius: 3px;
-  color: var(--class-accent);
+  color: var(--card-accent);
   font-size: 10px;
   white-space: nowrap;
 }
