@@ -1,18 +1,33 @@
 :root {
   color-scheme: dark;
-  --bg: #090d11;
-  --panel: #11171c;
-  --panel-2: #192128;
-  --line: #35434c;
-  --line-soft: #243038;
-  --text: #edf4f2;
-  --muted: #91a2aa;
-  --good: #32d58a;
-  --warn: #edc95f;
-  --hot: #ef5f59;
-  --skill: #55d6e4;
-  --class-accent: #55d6e4;
-  --class-soft: #173641;
+
+  /* 墨色底層 */
+  --ink: #0a0d11;
+  --ink-2: #12171d;
+  --lacquer: #171d24;
+  --lacquer-2: #1f272f;
+  --line: #2c3641;
+  --line-soft: #1d242b;
+
+  /* 宣紙與硃砂 */
+  --paper: #e9dcc0;
+  --paper-dim: #c3b593;
+  --paper-deep: #a89a78;
+  --cinnabar: #c8452f;
+  --cinnabar-lit: #e8543c;
+  --gold: #d8a12f;
+  --gold-lit: #f0d692;
+  --jade: #4fb8a0;
+  --plum: #8e4b6d;
+
+  --text: var(--paper);
+  --muted: #93917f;
+
+  --class-accent: var(--jade);
+  --class-soft: #1c2f2c;
+
+  --cjk: "Noto Serif TC", "Source Han Serif TC", "Songti TC", "PMingLiU", "MingLiU", "SimSun", serif;
+  --brush: "Ma Shan Zheng", "Noto Serif TC", "Songti TC", "PMingLiU", serif;
 }
 
 * {
@@ -23,29 +38,34 @@ body {
   min-height: 100vh;
   margin: 0;
   background:
-    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.015) 0 1px, transparent 1px 24px),
-    linear-gradient(180deg, #141c22 0, #090d11 54%, #111315 100%);
+    /* 宣紙纖維紋 */
+    repeating-linear-gradient(92deg, rgba(233, 220, 192, 0.014) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(4deg, rgba(233, 220, 192, 0.01) 0 1px, transparent 1px 5px),
+    radial-gradient(ellipse at 50% 0%, #1a2129 0%, #0d1116 52%, #070a0d 100%);
   color: var(--text);
-  font-family: "Segoe UI", "Microsoft JhengHei", system-ui, sans-serif;
+  font-family: var(--cjk);
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
 }
 
-body[data-class="adept"] {
-  --class-accent: #55d6e4;
-  --class-soft: #173641;
+body[data-class="tangmen"] {
+  --class-accent: #4fb8a0;
+  --class-soft: #1b2f2c;
 }
 
 body[data-class="swordsman"] {
-  --class-accent: #edc95f;
-  --class-soft: #3a3020;
+  --class-accent: #d8a12f;
+  --class-soft: #2f2718;
 }
 
 body[data-class="boxer"] {
-  --class-accent: #ed7f43;
-  --class-soft: #40271f;
+  --class-accent: #e07b3a;
+  --class-soft: #33211a;
 }
 
 button {
   font: inherit;
+  font-family: var(--cjk);
 }
 
 .shell {
@@ -54,24 +74,22 @@ button {
   margin: 0 auto;
   display: grid;
   grid-template-rows: auto auto;
-  gap: 10px;
+  gap: 12px;
   align-content: start;
   padding: 18px 0;
 }
 
-.stage,
-.bottom-hud {
-  border: 1px solid #3e4b53;
-  border-radius: 6px;
-  background: rgba(13, 18, 22, 0.96);
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.46);
-}
-
+/* ── 畫布外框：漆器裱框 ─────────────────────────────────────── */
 .stage {
   position: relative;
   overflow: hidden;
   touch-action: none;
-  border-top-color: var(--class-accent);
+  border: 1px solid #38414c;
+  border-radius: 3px;
+  background: #0a0d11;
+  box-shadow:
+    0 0 0 1px rgba(216, 161, 47, 0.22),
+    0 26px 68px rgba(0, 0, 0, 0.66);
 }
 
 .stage::after {
@@ -79,8 +97,23 @@ button {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 0 48px rgba(0, 0, 0, 0.42);
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.5);
+}
+
+/* 四角金屬包角 */
+.stage::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  pointer-events: none;
+  z-index: 2;
+  border: 1px solid rgba(216, 161, 47, 0.16);
+  clip-path: polygon(
+    0 0, 26px 0, 26px 1px, 1px 1px, 1px 26px, 0 26px,
+    0 100%, 26px 100%, 26px calc(100% - 1px), 1px calc(100% - 1px), 1px calc(100% - 26px), 0 calc(100% - 26px),
+    100% 100%, calc(100% - 26px) 100%, calc(100% - 26px) calc(100% - 1px), calc(100% - 1px) calc(100% - 1px), calc(100% - 1px) calc(100% - 26px), 100% calc(100% - 26px),
+    100% 0, calc(100% - 26px) 0, calc(100% - 26px) 1px, calc(100% - 1px) 1px, calc(100% - 1px) 26px, 100% 26px
+  );
 }
 
 canvas {
@@ -88,17 +121,26 @@ canvas {
   height: auto;
   aspect-ratio: 16 / 9;
   display: block;
-  background: #11171d;
+  background: #0a0d11;
 }
 
+/* ── 下方操作區：卷軸 ───────────────────────────────────────── */
 .bottom-hud {
-  min-height: 168px;
+  min-height: 172px;
   padding: 0;
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr) 176px;
+  grid-template-columns: 262px minmax(0, 1fr) 182px;
   gap: 0;
   align-items: stretch;
-  border-top: 3px solid var(--class-accent);
+  border: 1px solid #333c46;
+  border-top: 2px solid var(--class-accent);
+  border-radius: 3px;
+  background:
+    repeating-linear-gradient(92deg, rgba(233, 220, 192, 0.012) 0 1px, transparent 1px 4px),
+    linear-gradient(180deg, var(--lacquer) 0%, #0f141a 100%);
+  box-shadow:
+    0 0 0 1px rgba(216, 161, 47, 0.16),
+    0 18px 44px rgba(0, 0, 0, 0.5);
 }
 
 .status-panel,
@@ -117,47 +159,51 @@ canvas {
   border-right: 1px solid var(--line-soft);
 }
 
+.panel-label {
+  color: var(--muted);
+  font-family: var(--brush);
+  font-size: 16px;
+  letter-spacing: 2px;
+}
+
 .class-panel {
   display: grid;
   gap: 8px;
 }
 
-.class-panel > span {
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0;
-}
-
 .class-buttons {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 7px;
 }
 
+/* 門派鈕 = 篆刻印章 */
 .class-button {
-  min-height: 34px;
-  padding: 0 6px;
-  border: 1px solid #3a4851;
-  border-radius: 5px;
-  background: #182027;
+  min-height: 38px;
+  padding: 0 4px;
+  border: 1px solid #3b4650;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #1e252c, #151a20);
   color: var(--muted);
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 700;
-  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+  font-family: var(--brush);
+  font-size: 18px;
+  letter-spacing: 1px;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.class-button:hover {
+  border-color: var(--paper-deep);
+  color: var(--paper);
 }
 
 .class-button.active {
   border-color: var(--class-accent);
-  background: var(--class-soft);
-  color: var(--text);
-  box-shadow: inset 0 2px 0 var(--class-accent);
-}
-
-.class-button:hover {
-  background: #2b363f;
-  color: var(--text);
+  background: linear-gradient(180deg, var(--class-soft), #12171c);
+  color: var(--paper);
+  box-shadow:
+    inset 0 0 0 1px rgba(216, 161, 47, 0.28),
+    0 0 12px -2px var(--class-accent);
 }
 
 .meter-label,
@@ -168,66 +214,68 @@ canvas {
   gap: 12px;
 }
 
-.meter-label span,
-.stats span,
-.legend span {
-  color: var(--muted);
-  font-size: 13px;
-}
-
 .meter-label strong {
   color: var(--class-accent);
-  font-size: 14px;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
 }
 
+/* 氣條：石槽裡的玉光 */
 .meter {
-  height: 12px;
+  height: 13px;
   overflow: hidden;
-  margin-top: 8px;
-  border: 1px solid #42505a;
-  border-radius: 3px;
-  background: #080b0e;
+  margin-top: 7px;
+  border: 1px solid #3d4751;
+  border-radius: 1px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 24px, rgba(233, 220, 192, 0.09) 24px 25px),
+    #06090c;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.7);
 }
 
 .meter-fill {
   width: 0%;
   height: 100%;
-  background: linear-gradient(90deg, #d8b850, var(--class-accent));
+  background: linear-gradient(90deg, var(--jade), var(--gold) 78%, var(--gold-lit));
+  box-shadow: 0 0 10px -1px var(--gold);
   transition: width 120ms linear;
 }
 
 .meter-block.ready .meter {
-  border-color: var(--warn);
-  box-shadow: 0 0 12px rgba(237, 201, 95, 0.38);
+  border-color: var(--gold);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.7), 0 0 14px -2px var(--gold);
 }
 
 .meter-block.ready .meter-label strong {
-  color: var(--warn);
+  color: var(--gold-lit);
 }
 
 .stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 9px;
 }
 
-.stats div {
+.stat {
   min-width: 0;
-  padding: 8px 10px;
-  border-left: 3px solid var(--class-accent);
-  border-radius: 3px;
-  background: #151d23;
+  padding: 7px 10px;
+  border: 1px solid var(--line-soft);
+  border-left: 3px solid var(--jade);
+  border-radius: 1px;
+  background: linear-gradient(180deg, #171e24, #11161b);
 }
 
-.stats div:last-child {
-  border-left-color: var(--hot);
+.stat-foe {
+  border-left-color: var(--cinnabar);
 }
 
-.stats strong {
+.stat strong {
   display: block;
-  margin-top: 3px;
-  font-size: 17px;
+  margin-top: 2px;
+  font-size: 18px;
+  font-weight: 600;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .hand-panel {
@@ -241,8 +289,11 @@ canvas {
 
 .hand-header h1 {
   margin: 0;
-  font-size: 16px;
-  letter-spacing: 0;
+  font-family: var(--brush);
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: 3px;
+  color: var(--paper);
 }
 
 .header-actions {
@@ -251,134 +302,224 @@ canvas {
 }
 
 #restart,
-#pause {
-  min-height: 32px;
-  padding: 0 11px;
-  border: 1px solid #44515a;
-  border-radius: 5px;
-  background: #1c252c;
-  color: var(--text);
+#pause,
+#mute {
+  min-height: 33px;
+  padding: 0 13px;
+  border: 1px solid #46505b;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #1f272e, #161c22);
+  color: var(--paper-dim);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
+  transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
 }
 
 #restart:hover,
-#pause:hover {
-  background: #303c45;
+#pause:hover,
+#mute:hover {
+  border-color: var(--gold);
+  color: var(--paper);
+  background: linear-gradient(180deg, #2a333b, #1c232a);
 }
 
 #pause.active {
-  border-color: var(--warn);
-  background: #3a3020;
+  border-color: var(--gold);
+  background: linear-gradient(180deg, #33291a, #1f1a12);
+  color: var(--gold-lit);
+}
+
+#mute {
+  padding: 0 10px;
+}
+
+#mute.muted {
+  border-color: #5c5647;
+  background: linear-gradient(180deg, #1a1e22, #12161a);
+  color: #6d6a5e;
+  text-decoration: line-through;
 }
 
 .hand {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: 9px;
 }
 
 .card,
 .card-slot {
   width: 100%;
-  height: 112px;
-  border-radius: 6px;
+  height: 116px;
+  border-radius: 2px;
 }
 
+/* ── 手牌 = 符牌 ─────────────────────────────────────────────
+   五類卡各給一套明顯不同的紙色 + 粗上緣 + 反白標籤，
+   不要只靠一條細邊分辨（初版就是那樣，掃一眼分不出來）。 */
 .card {
   --card-accent: var(--class-accent);
-  --card-soft: var(--class-soft);
+  --card-paper-1: #e8dcbe;
+  --card-paper-2: #d4c5a0;
+  --card-ink: #241c10;
   position: relative;
   overflow: hidden;
-  padding: 10px;
-  border: 1px solid #45535c;
-  border-top: 3px solid var(--card-accent);
+  padding: 8px 10px;
+  border: 1px solid rgba(30, 22, 10, 0.5);
+  border-top: 6px solid var(--card-accent);
   background:
-    linear-gradient(155deg, color-mix(in srgb, var(--card-soft) 72%, #1a2228), #11171c 68%);
-  color: var(--text);
+    repeating-linear-gradient(93deg, rgba(60, 46, 20, 0.045) 0 1px, transparent 1px 4px),
+    linear-gradient(168deg, var(--card-paper-1) 0%, var(--card-paper-2) 100%);
+  color: var(--card-ink);
   text-align: left;
   cursor: pointer;
-  transition: transform 130ms ease, border-color 130ms ease, filter 130ms ease;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+    0 3px 10px rgba(0, 0, 0, 0.46);
+  transition: transform 150ms ease, box-shadow 150ms ease, filter 150ms ease;
+  animation: cardDraw 240ms cubic-bezier(0.22, 1.2, 0.36, 1);
 }
 
-.card[data-tone="airborne"] {
-  --card-accent: #51baff;
-  --card-soft: #17344a;
+@keyframes cardDraw {
+  from { opacity: 0; transform: translateY(14px) scale(0.93); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.card[data-tone="control"] {
-  --card-accent: #efc94f;
-  --card-soft: #3c321a;
-}
-
+/* 傷害：硃砂紅紙 */
 .card[data-tone="damage"] {
-  --card-accent: #f05e59;
-  --card-soft: #421e24;
+  --card-accent: #ca423d;
+  --card-paper-1: #ffbfb5;
+  --card-paper-2: #e69b91;
+  --card-ink: #512a25;
 }
 
-.card[data-tone="draw"] {
-  --card-accent: #f1f5f3;
-  --card-soft: #364047;
+/* 控制：赭金紙 */
+.card[data-tone="control"] {
+  --card-accent: #877100;
+  --card-paper-1: #fbe4a4;
+  --card-paper-2: #d6bf7e;
+  --card-ink: #3e3410;
 }
 
+/* 浮空：靛青紙 */
+.card[data-tone="airborne"] {
+  --card-accent: #007cc5;
+  --card-paper-1: #a6d1f7;
+  --card-paper-2: #80add4;
+  --card-ink: #1a374d;
+}
+
+/* 輔助：玉青紙 */
 .card[data-tone="utility"] {
-  --card-accent: #6fd39a;
-  --card-soft: #19352a;
+  --card-accent: #00854d;
+  --card-paper-1: #ace4c4;
+  --card-paper-2: #86c0a0;
+  --card-ink: #1a3b2a;
 }
 
+/* 抽牌：素墨紙 */
+.card[data-tone="draw"] {
+  --card-accent: #696259;
+  --card-paper-1: #bab5af;
+  --card-paper-2: #98928c;
+  --card-ink: #373430;
+}
+
+/* 左側粗色帶 */
 .card::before {
   content: "";
   position: absolute;
   top: 0;
   bottom: 0;
   left: 0;
-  width: 3px;
+  width: 5px;
   background: var(--card-accent);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--card-accent) 55%, transparent);
 }
 
+/* 右下硃砂印 */
 .card::after {
   content: "";
   position: absolute;
-  right: -24px;
-  bottom: -34px;
-  width: 78px;
-  height: 78px;
-  border: 1px solid color-mix(in srgb, var(--card-accent) 35%, transparent);
-  transform: rotate(45deg);
+  right: 6px;
+  bottom: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 2px;
+  background: var(--card-accent);
+  opacity: 0.85;
+  transform: rotate(-4deg);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
 }
 
 .card:hover,
 .card:focus-visible {
   outline: 0;
-  border-color: var(--card-accent);
-  transform: translateY(-2px);
-  filter: brightness(1.1);
+  transform: translateY(-4px);
+  filter: brightness(1.08) saturate(1.12);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.3),
+    0 9px 22px rgba(0, 0, 0, 0.58),
+    0 0 0 2px var(--card-accent);
 }
 
 .card:disabled {
   cursor: not-allowed;
-  opacity: 0.48;
+  filter: grayscale(0.72) brightness(0.66);
   transform: none;
+}
+
+/* 瞄準中：整張牌抬起來發光，配合棋盤上的準心 */
+.card.aiming {
+  transform: translateY(-8px);
+  filter: brightness(1.16) saturate(1.2);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.55),
+    0 12px 26px rgba(0, 0, 0, 0.6),
+    0 0 0 3px var(--gold),
+    0 0 22px -2px var(--gold);
+  animation: cardAiming 900ms ease-in-out infinite;
+}
+
+@keyframes cardAiming {
+  0%, 100% { box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.45),
+    0 12px 26px rgba(0, 0, 0, 0.6),
+    0 0 0 3px var(--gold),
+    0 0 14px -2px var(--gold); }
+  50%      { box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.72),
+    0 12px 26px rgba(0, 0, 0, 0.6),
+    0 0 0 3px var(--gold-lit),
+    0 0 30px 0 var(--gold); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card.aiming { animation: none; }
 }
 
 .card strong {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 7px;
-  color: var(--text);
-  font-size: 14px;
+  gap: 6px;
+  margin-bottom: 5px;
+  color: var(--card-ink);
+  font-family: var(--brush);
+  font-size: 19px;
+  font-weight: 400;
+  letter-spacing: 1px;
 }
 
+/* 標籤改成色塊反白，是最快的辨識點 */
 .card small {
-  padding: 2px 5px;
-  border: 1px solid color-mix(in srgb, var(--card-accent) 55%, #35434c);
-  border-radius: 3px;
-  color: var(--card-accent);
-  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 2px;
+  background: var(--card-accent);
+  color: #fdf6e6;
+  font-family: var(--cjk);
+  font-weight: 600;
+  font-size: 11px;
   white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .card span {
@@ -386,35 +527,61 @@ canvas {
   overflow: hidden;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.48;
+  color: var(--card-ink);
+  opacity: 0.78;
+  font-size: 11.5px;
+  line-height: 1.5;
+  padding-right: 22px;
 }
 
+/* 空槽：等待符牌落下的凹槽 */
 .card-slot {
   display: grid;
   place-items: center;
-  border: 1px dashed #3b4850;
-  background: repeating-linear-gradient(135deg, transparent 0 8px, rgba(255, 255, 255, 0.018) 8px 9px);
-  color: #6f7d86;
-  font-size: 12px;
+  border: 1px dashed #3d4650;
+  background:
+    repeating-linear-gradient(135deg, transparent 0 7px, rgba(233, 220, 192, 0.02) 7px 8px),
+    rgba(8, 11, 14, 0.5);
+  color: #5c6570;
+  font-family: var(--brush);
+  font-size: 16px;
+  letter-spacing: 2px;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
+/* 氣滿時，下一張符牌要落下的凹槽會呼吸 */
+body.charge-ready .card-slot:first-of-type {
+  border-color: var(--gold);
+  color: var(--gold-lit);
+  animation: slotBreathe 1.5s ease-in-out infinite;
+}
+
+@keyframes slotBreathe {
+  0%, 100% { box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 0 0 rgba(216, 161, 47, 0); }
+  50%      { box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 14px -2px rgba(216, 161, 47, 0.7); }
+}
+
+/* ── 心法口訣 ───────────────────────────────────────────────── */
 .legend {
   overflow: hidden;
   align-self: stretch;
 }
 
 .legend summary {
-  min-height: 44px;
+  min-height: 46px;
   padding: 12px;
   display: flex;
   align-items: center;
   cursor: pointer;
   color: var(--muted);
-  font-size: 13px;
-  font-weight: 700;
+  font-family: var(--brush);
+  font-size: 17px;
+  letter-spacing: 2px;
   list-style: none;
+}
+
+.legend summary:hover {
+  color: var(--paper);
 }
 
 .legend summary::-webkit-details-marker {
@@ -422,34 +589,40 @@ canvas {
 }
 
 .legend summary::after {
-  content: "+";
+  content: "＋";
   margin-left: auto;
-  color: var(--muted);
-  font-size: 20px;
+  color: var(--gold);
+  font-size: 15px;
 }
 
 .legend[open] summary::after {
-  content: "-";
+  content: "－";
 }
 
 .legend-content {
   padding: 0 12px 12px;
   display: grid;
   align-content: center;
-  gap: 9px;
+  gap: 8px;
 }
 
-@media (max-width: 900px) {
-  .bottom-hud {
-    grid-template-columns: 1fr;
-  }
+.legend-content span {
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+  padding-left: 9px;
+  border-left: 2px solid rgba(216, 161, 47, 0.3);
+}
 
+/* ── RWD ────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
   .shell {
     width: min(100%, calc(100vw - 16px));
     padding: 8px 0;
   }
 
   .bottom-hud {
+    grid-template-columns: 1fr;
     gap: 12px;
     padding: 12px;
   }
@@ -467,7 +640,7 @@ canvas {
 
   .card,
   .card-slot {
-    height: 106px;
+    height: 110px;
   }
 }
 
@@ -478,7 +651,7 @@ canvas {
 
   .card,
   .card-slot {
-    height: 116px;
+    height: 118px;
   }
 
   .hand-header {
@@ -491,8 +664,13 @@ canvas {
 
   #restart,
   #pause {
-    padding: 0 9px;
+    padding: 0 10px;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card { animation: none; }
+  body.charge-ready .card-slot:first-of-type { animation: none; }
 }
 
 body.mobile-input canvas {

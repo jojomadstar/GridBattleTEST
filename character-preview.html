@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>脈息・角色預覽</title>
+  <style>
+    * { box-sizing: border-box; letter-spacing: 0; }
+    body { margin: 0; color: #e4e7e5; background: #191d21; font: 15px system-ui, sans-serif; }
+    header, main, footer { max-width: 1280px; margin: auto; padding: 24px; }
+    header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; border-bottom: 1px solid #394147; }
+    h1 { margin: 0; font-size: 22px; font-weight: 600; }
+    nav { display: flex; gap: 20px; }
+    a { color: #a8d9ce; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    a:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid #f5c880; outline-offset: 4px; }
+    .controls { display: flex; align-items: center; flex-wrap: wrap; gap: 24px; padding: 8px 0 28px; }
+    label { display: inline-flex; align-items: center; gap: 10px; }
+    select { font: inherit; padding: 8px 32px 8px 12px; border: 1px solid #627077; border-radius: 4px; color: inherit; background: #252c32; min-width: 140px; }
+    input { accent-color: #73c5b4; width: 18px; height: 18px; }
+    .roster { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    figure { min-width: 0; margin: 0; border-right: 1px solid #394147; }
+    figure:last-child { border-right: 0; }
+    canvas { display: block; width: 100%; aspect-ratio: 320 / 350; }
+    figcaption { text-align: center; padding: 18px 0 28px; color: var(--accent); font-size: 22px; font-weight: 600; }
+    footer { border-top: 1px solid #394147; color: #a3aeb3; font-size: 13px; }
+    @media (max-width: 850px) {
+      .roster { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      figure:nth-child(2) { border-right: 0; }
+      figure:nth-child(-n+2) { border-bottom: 1px solid #394147; }
+      header, main, footer { padding: 20px 16px; }
+      figcaption { font-size: 19px; padding-top: 8px; }
+    }
+    @media (max-width: 400px) { nav { gap: 14px; font-size: 13px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>角色預覽</h1>
+    <nav aria-label="遊戲版本"><a href="index.html">進入演武場</a><a href="index.html?art=classic">原版造型</a></nav>
+  </header>
+  <main>
+    <div class="controls">
+      <label for="action">動作
+        <select id="action">
+          <option value="idle">待機</option><option value="attack">普通攻擊</option>
+          <option value="cast">施放技能</option><option value="hurt">受擊</option>
+          <option value="guard">防守</option><option value="charge">蓄力</option>
+          <option value="channel">連續出拳</option><option value="airborne">浮空</option>
+        </select>
+      </label>
+      <label><input id="playing" type="checkbox" checked>播放動畫</label>
+    </div>
+    <section class="roster" aria-label="角色造型">
+      <figure style="--accent:#8fd9c7"><canvas data-character="tangmen" aria-label="唐門動態角色"></canvas><figcaption>唐門</figcaption></figure>
+      <figure style="--accent:#e8ddae"><canvas data-character="swordsman" aria-label="劍客動態角色"></canvas><figcaption>劍客</figcaption></figure>
+      <figure style="--accent:#f2b381"><canvas data-character="boxer" aria-label="拳師動態角色"></canvas><figcaption>拳師</figcaption></figure>
+      <figure style="--accent:#e29bb3"><canvas data-character="enemy" aria-label="魔道宗師動態角色"></canvas><figcaption>魔道宗師</figcaption></figure>
+    </section>
+  </main>
+  <footer>脈息・演武場 / Canvas 2D</footer>
+  <script src="character-art.js"></script>
+  <script src="character-preview.js"></script>
+</body>
+</html>

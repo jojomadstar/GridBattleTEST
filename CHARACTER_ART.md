@@ -1,0 +1,48 @@
+# Canvas Character Art
+
+The default renderer is `character-art.js`. It draws paths directly into Canvas
+2D and does not request sprite images. Existing bitmap experiments are retained
+but are not loaded by the game.
+
+## Preview
+
+- Open `character-preview.html` for all four characters and animation controls.
+- Open `index.html` for the new art in combat.
+- Open `index.html?art=classic` for the previous procedural character drawings.
+
+The preview links connect these views. All paths are relative and work on GitHub
+Pages, but this change does not publish or deploy the project.
+
+## Rendering Contract
+
+`CharacterArt.draw(ctx, character, unit, options)` draws at the existing unit
+origin with feet near `y = 18`. Player characters face right, enemies face left.
+It restores the canvas state and never changes position, health, targeting, or
+damage rules. Cached `Path2D` objects only contain static shape definitions.
+
+`play` starts an animation. `update` advances its clock in seconds; the game calls
+it from the existing unpaused simulation update. Movement cannot cancel an active
+attack pose, and ordinary attacks cannot replace a charged casting pose.
+
+Arms use two-bone joints; cloth, hair, torso, feet, and weapon poses interpolate
+separately. No full-body squash is applied. Damage, crowd control, channeling,
+guarding, and teleport warnings determine the visible pose. Crowd control takes
+priority over enemy windup. The existing battlefield effects still render above
+the characters.
+
+## Checks
+
+Run with Node.js, without installing dependencies:
+
+```sh
+node --check character-art.js
+node --check character-preview.js
+node --check game.js
+node tests/character-art.test.cjs
+```
+
+The unit checks cover all four characters across six animation paths, animation
+expiry, state priority, and unchanged combat coordinates/health. Browser checks
+should additionally cover all cards, pause/resume, mobile layouts, transparency,
+animation pixel changes, and weapon bounds. Keep every preview animation inside
+its canvas, especially the swordsman's windup and extended thrust.

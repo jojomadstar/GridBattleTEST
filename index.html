@@ -3,22 +3,25 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Pulse Deck Prototype</title>
+    <title>脈息・演武場</title>
     <link rel="icon" href="data:,">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;900&family=Ma+Shan+Zheng&family=Cinzel:wght@600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <main class="shell">
-      <section class="stage" aria-label="battle field">
+      <section class="stage" aria-label="演武場">
         <canvas id="game" width="1152" height="648"></canvas>
       </section>
 
-      <section class="bottom-hud" aria-label="battle controls">
+      <section class="bottom-hud" aria-label="戰鬥操作">
         <div class="status-panel">
-          <div class="class-panel" aria-label="class select">
-            <span>職業</span>
+          <div class="class-panel" aria-label="門派選擇">
+            <span class="panel-label">門派</span>
             <div class="class-buttons">
-              <button class="class-button active" type="button" data-class="adept">脈衝使</button>
+              <button class="class-button active" type="button" data-class="tangmen">唐門</button>
               <button class="class-button" type="button" data-class="swordsman">劍客</button>
               <button class="class-button" type="button" data-class="boxer">拳師</button>
             </div>
@@ -26,7 +29,7 @@
 
           <div class="meter-block">
             <div class="meter-label">
-              <span>氣條</span>
+              <span class="panel-label">氣</span>
               <strong id="chargeText">0%</strong>
             </div>
             <div class="meter">
@@ -35,43 +38,49 @@
           </div>
 
           <div class="stats">
-            <div>
-              <span>玩家</span>
-              <strong id="playerHp">100</strong>
+            <div class="stat stat-self">
+              <span class="panel-label">我方</span>
+              <strong id="playerHp">135</strong>
             </div>
-            <div>
-              <span>敵人</span>
-              <strong id="enemyHp">640</strong>
+            <div class="stat stat-foe">
+              <span class="panel-label">魔道</span>
+              <strong id="enemyHp">600</strong>
             </div>
           </div>
         </div>
 
         <div class="hand-panel">
           <div class="hand-header">
-            <h1>技能手牌</h1>
+            <h1>招式手牌</h1>
             <div class="header-actions">
+              <button id="mute" type="button" aria-pressed="false">有聲</button>
               <button id="pause" type="button">暫停</button>
               <button id="restart" type="button">重新開始</button>
             </div>
           </div>
-          <div id="hand" class="hand" aria-live="polite"></div>
+          <div id="hand" class="hand"></div>
         </div>
 
         <details class="legend">
-          <summary>操作說明</summary>
+          <summary>心法口訣</summary>
           <div class="legend-content">
-            <span>移動 WASD / 方向鍵</span>
-            <span>普攻 J / Space</span>
-            <span>技能 1-4 / 點擊卡牌</span>
-            <span>暫停 P / Escape</span>
-            <span>手機：在棋盤滑動移動，點擊棋盤普攻</span>
-            <span>劍客：劍氣浮空後接攻擊可加倍擊飛</span>
-            <span>拳師：推拉控位後定身，再打爆發</span>
+            <span>移動 WASD／方向鍵</span>
+            <span>普攻 J／Space</span>
+            <span>招式 1-4／點擊手牌：第一下瞄準，第二下施放</span>
+            <span>取消瞄準 Q／Escape</span>
+            <span>暫停 P／Escape　｜　靜音：右上「有聲」鈕</span>
+            <span>手機：棋盤滑動移動，點擊普攻</span>
+            <span>劍客：浮空後接特定攻擊可加倍擊飛</span>
+            <span>拳師：普攻會順移到敵人正對格出拳，必中但位置由敵人決定</span>
+            <span>拳師：攻速較慢，但每拳集氣較高</span>
+            <span>拳師：百裂崩拳引導 1.6 秒期間無法移動</span>
+            <span>魔道會同時放場地攻擊與招式，先讀腳下再讀招</span>
           </div>
         </details>
       </section>
     </main>
 
+    <script src="character-art.js"></script>
     <script src="game.js"></script>
   </body>
 </html>
