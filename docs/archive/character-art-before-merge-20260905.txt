@@ -1,3 +1,6 @@
+歷史封存，2026-09-05。原檔：CHARACTER_ART.md。
+目前規格與交接只維護根目錄 PROJECT.md；以下原文不再更新，不代表最新實作。
+<!-- ORIGINAL -->
 # Canvas Character Art
 
 The default renderer is `character-art.js`. It draws paths directly into Canvas
@@ -39,6 +42,7 @@ node --check character-art.js
 node --check character-preview.js
 node --check game.js
 node tests/character-art.test.cjs
+node tests/boxer-basic.test.cjs
 ```
 
 The unit checks cover all four characters across six animation paths, animation

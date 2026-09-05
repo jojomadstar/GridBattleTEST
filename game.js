@@ -25,20 +25,12 @@ const BOARD_BOTTOM_RIGHT = { x: 1040, y: 458 };
 const TANGMEN_MAX_HP = 135;
 const SWORDSMAN_MAX_HP = 150;
 const BOXER_MAX_HP = 180;
-// 拳師普攻＝順移突進。順移之後「保證命中」，所以節奏必須明顯放慢，
-// 否則會失衡 —— 實測用 0.75s 時勝率 95%，另外兩職業只有 40-51%。
-// 掃過 0.75 / 0.85 / 0.95 / 1.05 之後定在 1.0s：勝率約 53-59%，
-// 抽牌每 2.1-2.4 秒一張，跟唐門(2.45s)、劍客(2.08s) 同一個區間。
-// 集氣 45（原本 34）確保攻速變慢不會害抽牌變慢。
-const BOXER_DASH_TIME = 0.15;
+// 同列時普攻輔助鎖定；落點在出拳時固定，命中判定對齊揮拳，收招後返回。
+const BOXER_STRIKE_IMPACT = 0.16;
+const BOXER_STRIKE_DURATION = 0.42;
 const BOXER_ATTACK_CD = 1.0;
-const BOXER_BASIC_CHARGE = 45;
+const BOXER_BASIC_CHARGE = 90;
 const BOXER_BASIC_DAMAGE = 18;
-// 落地僵直：順移之後有一小段不能動。
-// 沒有這個的話，拳師等於「保證命中 + 走位完全自由」——
-// 模擬中它可以把所有移動都拿去閃招卻照樣每拳都中，勝率遠高於另外兩個職業。
-// 有了僵直，順移到亮著的罡氣格上就真的躲不掉，突進才有代價。
-const BOXER_DASH_RECOVER = 0.22;
 const ENEMY_MAX_HP = 600;
 const CRIT_CHANCE = 0.15;
 const DAMAGE_VARIANCE = 0.1;
@@ -1231,7 +1223,7 @@ const classes = {
     name: "拳師",
     color: "#e07b3a",
     maxHp: BOXER_MAX_HP,
-    message: "拳師：普攻順移到敵人面前出拳，攻速慢但集氣高",
+    message: "拳師：同列普攻鎖定敵人左側出拳，收招返回；命中集氣 90",
     deck: [
       {
         id: "driving-palm",
@@ -1371,47 +1363,22 @@ const classes = {
         }
       }
     ],
-    // 順移到敵人正對格再出拳。代價是位置由敵人決定 ——
-    // 有可能被順移到正在亮的罡氣格上，也會餵給魔道的反身崩罡。
     basicAttack(game) {
-      const target = boxerDashTarget();
-      const rooted = playerIsChanneling();
-
-      if (target && !rooted && (game.player.col !== target.col || game.player.row !== target.row)) {
-        const fromCol = game.player.col;
-        const fromRow = game.player.row;
-        game.player.col = target.col;
-        game.player.row = target.row;
-        game.player.dash = { fromCol, fromRow, time: BOXER_DASH_TIME, duration: BOXER_DASH_TIME };
-        game.player.moveCooldown = Math.max(game.player.moveCooldown, BOXER_DASH_RECOVER);
-        addDashTrail(fromCol, fromRow, target.col, target.row);
-        SFX.boxerDash();
-      }
-
-      const aim = combatAimCell();
+      const aim = boxerBasicTarget();
+      const origin = { side: "player", col: game.player.col, row: game.player.row };
+      const landing = offsetCell(aim, -1);
+      game.player.boxerStrike = { origin, landing, aim, elapsed: 0, resolved: false };
+      addDashTrail(origin, landing);
+      SFX.boxerDash();
       game.effects.push({
         kind: "target",
-        side: aim.side,
-        col: aim.col,
-        row: aim.row,
+        ...aim,
         color: "#e07b3a",
-        time: 0.24,
-        duration: 0.24
+        time: BOXER_STRIKE_DURATION,
+        duration: BOXER_STRIKE_DURATION
       });
-
-      if (enemyOnCell(aim)) {
-        hitEnemyWithSkill(BOXER_BASIC_DAMAGE, {
-          charge: BOXER_BASIC_CHARGE, color: "#e07b3a", kind: "basic", sfx: () => SFX.punch(1.15)
-        });
-        addPunchHitEffect();
-        game.message = rooted ? "引導中無法順移，就地出拳" : "崩山突：順移欺身，一拳命中";
-      } else {
-        // 揮空也要有聲音，不然會以為按鍵沒反應
-        noise({ dur: 0.13, vol: 0.16, type: "bandpass", freq: 620, freqEnd: 1900, q: 0.8, wet: 0.2 });
-        game.message = rooted
-          ? "引導中無法順移，這一拳打空了"
-          : "敵人瞬身中，無法順移欺身";
-      }
+      game.message = "崩山突：瞬移出拳";
+      renderHand();
     }
   }
 };
@@ -1434,7 +1401,7 @@ function createInitialState() {
       counter: 0,
       charge: 0,
       aiming: null,
-      dash: null,
+      boxerStrike: null,
       hand: Array(HAND_SIZE).fill(null)
     },
     enemy: {
@@ -1542,7 +1509,38 @@ function playerMaxHp() {
 }
 
 function combatAimCell() {
+  if (state.player.boxerStrike) return state.player.boxerStrike.aim;
   return forwardCellFromPlayer(state.player.col, state.player.row, 4);
+}
+
+function offsetCell(cell, dc, dr = 0) {
+  const col = (cell.side === "enemy" ? COLS_PER_SIDE : 0) + cell.col + dc;
+  const row = cell.row + dr;
+  if (col < 0 || col >= COLS_PER_SIDE * 2 || row < 0 || row >= ROWS) return null;
+  return col < COLS_PER_SIDE ? { side: "player", col, row }
+    : { side: "enemy", col: col - COLS_PER_SIDE, row };
+}
+
+// 原格保留給返回與移動；繪圖、受擊與敵人瞄準共用瞬移中的實際位置。
+function playerCombatCell() {
+  return state.player.boxerStrike?.landing
+    || { side: "player", col: state.player.col, row: state.player.row };
+}
+
+function playerCombatPosition() {
+  const cell = playerCombatCell();
+  return cellCenter(cell.side, cell.col, cell.row);
+}
+
+function playerOnCell(cell) {
+  const player = playerCombatCell();
+  return cell.side === player.side && cell.col === player.col && cell.row === player.row;
+}
+
+function boxerBasicTarget() {
+  const enemy = enemyVisualCell();
+  if (enemy.row === state.player.row && offsetCell(enemy, -1)) return { ...enemy };
+  return { ...combatAimCell() };
 }
 
 function enemyOnCell(cell) {
@@ -1704,10 +1702,10 @@ function addDartSpray(rows, col, width, color, side = "enemy") {
   });
 }
 
-function addPlayerTileTelegraph(col, row, delay, damage, color = "#c8452f") {
+function addPlayerTileTelegraph(col, row, delay, damage, color = "#c8452f", side = "player") {
   state.effects.push({
     kind: "tileTelegraph",
-    side: "player",
+    side,
     col,
     row,
     color,
@@ -1715,9 +1713,9 @@ function addPlayerTileTelegraph(col, row, delay, damage, color = "#c8452f") {
     duration: delay,
     onFinish() {
       SFX.tileBurst();
-      const pos = cellCenter("player", col, row);
+      const pos = cellCenter(side, col, row);
       addBurst(pos.x, pos.y - 10, color, 0.24);
-      if (state.player.col === col && state.player.row === row) {
+      if (playerOnCell({ side, col, row })) {
         damagePlayer(damage);
       }
     }
@@ -1738,7 +1736,7 @@ function addColumnTelegraph(side, col, rows, delay, damage = 0) {
         const pos = cellCenter(side, col, row);
         addBurst(pos.x, pos.y - 10, "#d8623f", 0.18);
       }
-      if (side === "player" && state.player.col === col && rows.includes(state.player.row)) {
+      if (rows.some((row) => playerOnCell({ side, col, row }))) {
         damagePlayer(damage);
       }
     }
@@ -1840,22 +1838,46 @@ function hitEnemyWithSkill(baseDamage, options = {}) {
   }
 }
 
-// 拳師順移的落點：我方場地上正對敵人的那一格。
-// 準心是「玩家前方第四格」，也就是欄位鏡像，所以站到跟敵人同欄同列就一定打得到。
-function boxerDashTarget() {
-  const cell = enemyVisualCell();
-  // 敵人瞬身到我方場地時沒有「正對格」可站，這時不順移
-  if (cell.side !== "enemy") return null;
-  return { col: cell.col, row: cell.row };
+function finishBoxerStrike() {
+  const strike = state.player.boxerStrike;
+  if (!strike) return;
+  state.player.col = strike.origin.col;
+  state.player.row = strike.origin.row;
+  state.player.boxerStrike = null;
+  addDashTrail(strike.landing, strike.origin);
+  renderHand();
 }
 
-function addDashTrail(fromCol, fromRow, toCol, toRow) {
+function updateBoxerStrike(dt) {
+  const strike = state.player.boxerStrike;
+  if (!strike || paused) return;
+  if (state.phase !== "playing" || state.player.hp <= 0) {
+    finishBoxerStrike();
+    return;
+  }
+  strike.elapsed += dt;
+  if (!strike.resolved && strike.elapsed >= BOXER_STRIKE_IMPACT) {
+    strike.resolved = true;
+    if (enemyOnCell(strike.aim)) {
+      hitEnemyWithSkill(BOXER_BASIC_DAMAGE, {
+        charge: BOXER_BASIC_CHARGE, color: "#e07b3a", kind: "basic", sfx: () => SFX.punch(1.15)
+      });
+      addPunchHitEffect();
+      if (state.phase === "playing") state.message = "崩山突：命中";
+    } else {
+      noise({ dur: 0.13, vol: 0.16, type: "bandpass", freq: 620, freqEnd: 1900, q: 0.8, wet: 0.2 });
+      state.message = "崩山突：落空";
+    }
+  }
+  if (strike.elapsed >= BOXER_STRIKE_DURATION) finishBoxerStrike();
+}
+
+function addDashTrail(from, to) {
+  if (from.side === to.side && from.col === to.col && from.row === to.row) return;
   state.effects.push({
     kind: "dashTrail",
-    fromCol,
-    fromRow,
-    toCol,
-    toRow,
+    from: { ...from },
+    to: { ...to },
     color: "#e07b3a",
     time: 0.3,
     duration: 0.3
@@ -1868,13 +1890,15 @@ function swordQiInFlight() {
 }
 
 function playerBasicAttack() {
-  if (paused || state.phase !== "playing" || state.player.attackCooldown > 0) return;
+  if (paused || state.phase !== "playing" || state.player.attackCooldown > 0 || state.player.boxerStrike) return;
+  if (selectedClass === "boxer" && playerIsChanneling()) return;
   // 劍客的節奏由「一次只能一道劍氣」控制，冷卻只用來擋按鍵連點
   if (selectedClass === "swordsman" && swordQiInFlight()) return;
   if (selectedClass === "swordsman") state.player.attackCooldown = 0.16;
   else if (selectedClass === "boxer") state.player.attackCooldown = BOXER_ATTACK_CD;
   else state.player.attackCooldown = 0.34;
-  CharacterArt.play(state.player, "attack", selectedClass === "boxer" ? 0.46 : 0.32);
+  if (selectedClass === "boxer") state.player.artAction = null;
+  CharacterArt.play(state.player, "attack", selectedClass === "boxer" ? BOXER_STRIKE_DURATION : 0.32);
   classes[selectedClass].basicAttack(state);
 }
 
@@ -1923,7 +1947,7 @@ function resolveCard(index) {
 }
 
 function castCard(index) {
-  if (paused || state.phase !== "playing") return;
+  if (paused || state.phase !== "playing" || state.player.boxerStrike) return;
   const card = state.player.hand[index];
   if (!card) return;
 
@@ -1995,7 +2019,7 @@ function damagePlayer(amount) {
   if (state.player.counter > 0) {
     state.player.counter = 0;
     CharacterArt.play(state.player, "slash", 0.4);
-    const pos = cellCenter("player", state.player.col, state.player.row);
+    const pos = playerCombatPosition();
     addBurst(pos.x, pos.y - 20, "#8e4b6d", 0.3);
     SFX.counterHit();
     hitEnemyWithSkill(46, { color: "#8e4b6d" });
@@ -2027,7 +2051,7 @@ function playerIsChanneling() {
 }
 
 function movePlayer(dx, dy) {
-  if (state.phase !== "playing" || state.player.moveCooldown > 0) return;
+  if (paused || state.phase !== "playing" || state.player.moveCooldown > 0 || state.player.boxerStrike) return;
   if (playerIsChanneling()) {
     state.message = "百裂崩拳引導中：雙腳生根，無法移動";
     return;
@@ -2230,11 +2254,10 @@ function addEnemyLaneShot(row) {
 
 function startTeleportStrike() {
   const enemy = state.enemy;
-  const frontGlobalCol = state.player.col + 1;
-  const landing = frontGlobalCol < COLS_PER_SIDE
-    ? { side: "player", col: frontGlobalCol, row: state.player.row }
-    : { side: "enemy", col: 0, row: state.player.row };
-  const targetRows = [state.player.row - 1, state.player.row, state.player.row + 1]
+  const player = playerCombatCell();
+  const landing = offsetCell(player, 1);
+  if (!landing) return;
+  const targetRows = [player.row - 1, player.row, player.row + 1]
     .filter((row) => row >= 0 && row < ROWS);
 
   enemy.teleportStrike = {
@@ -2243,7 +2266,7 @@ function startTeleportStrike() {
     duration: 1,
     origin: { side: "enemy", col: enemy.col, row: enemy.row },
     landing,
-    targetCells: targetRows.map((row) => ({ side: "player", col: state.player.col, row }))
+    targetCells: targetRows.map((row) => ({ side: player.side, col: player.col, row }))
   };
 
   const originPos = cellCenter("enemy", enemy.col, enemy.row);
@@ -2298,9 +2321,7 @@ function updateTeleportStrike(enemy, dt) {
       const pos = cellCenter(cell.side, cell.col, cell.row);
       addBurst(pos.x, pos.y - 12, "#c8452f", 0.28);
     }
-    const hit = strike.targetCells.some((cell) => (
-      state.player.col === cell.col && state.player.row === cell.row
-    ));
+    const hit = strike.targetCells.some(playerOnCell);
     if (hit) damagePlayer(TELEPORT_DAMAGE);
     if (state.phase === "playing") {
       state.message = hit
@@ -2396,16 +2417,12 @@ function updateCounterBurst(enemy, dt) {
   enemy.counterCooldown = COUNTER_COOLDOWN + COUNTER_WARNING;
 
   // 以玩家當下位置為中心的十字，逼玩家離開輸出位
-  const cells = [
-    { col: state.player.col, row: state.player.row },
-    { col: state.player.col - 1, row: state.player.row },
-    { col: state.player.col + 1, row: state.player.row },
-    { col: state.player.col, row: state.player.row - 1 },
-    { col: state.player.col, row: state.player.row + 1 }
-  ].filter((c) => c.col >= 0 && c.col < COLS_PER_SIDE && c.row >= 0 && c.row < ROWS);
+  const player = playerCombatCell();
+  const cells = [[0, 0], [-1, 0], [1, 0], [0, -1], [0, 1]]
+    .map(([dc, dr]) => offsetCell(player, dc, dr)).filter(Boolean);
 
   for (const cell of cells) {
-    addPlayerTileTelegraph(cell.col, cell.row, COUNTER_WARNING, COUNTER_DAMAGE, "#8e4b6d");
+    addPlayerTileTelegraph(cell.col, cell.row, COUNTER_WARNING, COUNTER_DAMAGE, "#8e4b6d", cell.side);
   }
   SFX.counterBurst();
   const pos = enemyVisualPosition();
@@ -2512,7 +2529,7 @@ function updateEnemySpecial(enemy, dt) {
       target.col,
       enemy.special.rows,
       0.32,
-      target.side === "player" ? WAVE_DAMAGE : 0
+      WAVE_DAMAGE
     );
     enemy.special.step += 1;
     enemy.special.timer = 0.32;
@@ -2577,7 +2594,7 @@ function updateProjectiles(dt) {
         else addBurst(enemyCenter.x, enemyCenter.y - 20, projectile.trail || projectile.color, 0.18);
       }
     } else {
-      const playerCenter = cellCenter("player", state.player.col, state.player.row);
+      const playerCenter = playerCombatPosition();
       if (Math.hypot(projectile.x - playerCenter.x, projectile.y - (playerCenter.y - 18)) < 35) {
         projectile.dead = true;
         damagePlayer(projectile.damage);
@@ -2627,16 +2644,13 @@ function update(dt) {
   CharacterArt.update(state.enemy, dt);
   updateInput();
   state.player.moveCooldown = Math.max(0, state.player.moveCooldown - dt);
-  if (state.player.dash) {
-    state.player.dash.time -= dt;
-    if (state.player.dash.time <= 0) state.player.dash = null;
-  }
   state.player.attackCooldown = Math.max(0, state.player.attackCooldown - dt);
   state.player.invuln = Math.max(0, state.player.invuln - dt);
   state.player.counter = Math.max(0, state.player.counter - dt);
   updateEnemy(dt);
   updateProjectiles(dt);
   updateEffects(dt);
+  updateBoxerStrike(dt);
   updatePetals(dt);
   syncHud();
 }
@@ -3229,23 +3243,24 @@ function drawGrid(side) {
     ctx.drawImage(gridCache, 0, 0, LOGIC_W, LOGIC_H);
 
     // 玩家所在格：呼吸中的罡氣光環
+    const player = playerCombatCell();
     const accent = classes[selectedClass].color;
     const breath = 0.5 + Math.sin(performance.now() / 340) * 0.16;
     ctx.save();
     ctx.fillStyle = `${accent}22`;
-    drawPolygon(cellPolygon("player", state.player.col, state.player.row, 5));
+    drawPolygon(cellPolygon(player.side, player.col, player.row, 5));
     ctx.fill();
     ctx.globalAlpha = breath;
     ctx.strokeStyle = accent;
     ctx.lineWidth = 2.6;
     ctx.shadowColor = accent;
     ctx.shadowBlur = 12;
-    drawPolygon(cellPolygon("player", state.player.col, state.player.row, 7));
+    drawPolygon(cellPolygon(player.side, player.col, player.row, 7));
     ctx.stroke();
     ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
     // 四角準星
-    const poly = cellPolygon("player", state.player.col, state.player.row, 7);
+    const poly = cellPolygon(player.side, player.col, player.row, 7);
     ctx.strokeStyle = INK.gold;
     ctx.lineWidth = 2;
     for (const point of poly) {
@@ -4100,16 +4115,7 @@ function drawEnemyCharacter() {
 }
 
 function drawUnit(unit, side, color) {
-  let pos = cellCenter(side, unit.col, unit.row);
-  // 拳師順移：邏輯位置已經到目的地了（命中判定才不會有時序問題），
-  // 但畫面上用 easeOut 從起點滑過去，讓那 0.15 秒有東西可看。
-  if (side === "player" && state.player.dash) {
-    const d = state.player.dash;
-    const t = 1 - d.time / d.duration;
-    const ease = 1 - Math.pow(1 - t, 3);
-    const from = cellCenter("player", d.fromCol, d.fromRow);
-    pos = { x: from.x + (pos.x - from.x) * ease, y: from.y + (pos.y - from.y) * ease };
-  }
+  let pos = side === "player" ? playerCombatPosition() : cellCenter(side, unit.col, unit.row);
   if (side === "enemy" && state.enemy.teleportStrike) {
     const landing = state.enemy.teleportStrike.landing;
     pos = cellCenter(landing.side, landing.col, landing.row);
@@ -4797,8 +4803,8 @@ function drawEffects(layer = "under") {
     }
     // 拳師順移：起點塵土、路徑速度線、三道殘影
     if (effect.kind === "dashTrail") {
-      const from = cellCenter("player", effect.fromCol, effect.fromRow);
-      const to = cellCenter("player", effect.toCol, effect.toRow);
+      const from = cellCenter(effect.from.side, effect.from.col, effect.from.row);
+      const to = cellCenter(effect.to.side, effect.to.col, effect.to.row);
       const fade = 1 - progress;
 
       ctx.save();
@@ -4828,7 +4834,7 @@ function drawEffects(layer = "under") {
       // 起點揚起的塵土
       ctx.globalAlpha = fade * 0.44;
       ctx.fillStyle = "rgba(190, 176, 148, 0.8)";
-      const rand2 = seededRandom(effect.fromCol * 131 + effect.fromRow * 17 + 7);
+      const rand2 = seededRandom(effect.from.col * 131 + effect.from.row * 17 + 7);
       for (let i = 0; i < 7; i += 1) {
         const a = rand2() * Math.PI * 2;
         const d = 8 + progress * (18 + rand2() * 20);
@@ -5311,7 +5317,7 @@ function render() {
   drawEffects("under");
   drawTeleportStrikeWarning();
   // 後排先畫，前排後畫，避免前後排角色疊錯
-  const playerFirst = state.player.row <= enemyVisualCell().row;
+  const playerFirst = playerCombatCell().row <= enemyVisualCell().row;
   if (playerFirst) {
     drawUnit(state.player, "player", classes[selectedClass].color);
     drawUnit(state.enemy, "enemy", INK.cinnabar);
@@ -5373,7 +5379,7 @@ function buildCard(card, index) {
 }
 
 function renderHand() {
-  const locked = paused || state.phase !== "playing";
+  const locked = paused || state.phase !== "playing" || Boolean(state.player.boxerStrike);
 
   state.player.hand.forEach((card, index) => {
     const current = handEl.children[index];
