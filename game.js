@@ -123,7 +123,7 @@ const MASTER_VOL = 0.5;
 function initAudio() {
   if (audioBroken) return null;
   if (audioCtx) {
-    if (audioCtx.state === "suspended") audioCtx.resume();
+    if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
     return audioCtx;
   }
   const AC = window.AudioContext || window.webkitAudioContext;
@@ -146,9 +146,9 @@ function buildAudioGraph() {
 
   // 壓縮器：把整體動態拉平
   const comp = audioCtx.createDynamicsCompressor();
-  comp.threshold.value = -14;
+  comp.threshold.value = -10;
   comp.knee.value = 8;
-  comp.ratio.value = 14;
+  comp.ratio.value = 4;
   comp.attack.value = 0.002;
   comp.release.value = 0.14;
 
@@ -895,69 +895,33 @@ const SFX = {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-// 真實錄音支援
-// 合成再怎麼調，跟真正錄下來的鋼鐵撞擊還是有差 —— 那是實體事件的複雜頻譜，
-// 合成器做不出來。所以留一層覆蓋機制：
-//   在 sounds/ 放入與音效同名的檔案（如 sounds/swordImpact.wav），
-//   載入成功就用錄音，失敗就自動退回合成，不需要改任何程式碼。
-const SAMPLE_DIR = "sounds/";
-const SAMPLE_EXT = [".wav", ".ogg", ".mp3"];
-const sampleBuffers = new Map();
-let samplesChecked = false;
+// Generated Foley bank; the original synthesizer is only an offline/load-failure fallback.
+const soundBank = window.CombatAudio && window.COMBAT_SOUND_MANIFEST
+  ? window.CombatAudio.create({ manifest: window.COMBAT_SOUND_MANIFEST }) : null;
+SFX.dartImpact = () => SFX.hitLight();
+SFX.punchSwing = () => SFX.boxerDash();
+SFX.breathing = () => SFX.drawCard();
+SFX.waveSweep = () => SFX.enemyShot();
 
-function playSample(name, { vol = 1, wet = 0.16, pan = 0 } = {}) {
-  const buf = sampleBuffers.get(name);
-  if (!buf || !audioReady()) return false;
-  const ac = audioCtx;
-  const t0 = ac.currentTime;
-  const src = ac.createBufferSource();
-  src.buffer = buf;
-  src.playbackRate.value = 1 + (Math.random() * 2 - 1) * 0.04;   // 微幅變速，連發不會一模一樣
-  const g = ac.createGain();
-  g.gain.value = vol;
-  const out = voice(wet, pan);
-  src.connect(g); g.connect(out);
-  src.start(t0);
-  releaseVoice(out, t0 + buf.duration + 0.1);
-  return true;
-}
-
-// 把 SFX 的每個函式包一層：有錄音就用錄音，沒有就走原本的合成
 function installSampleOverrides() {
   for (const name of Object.keys(SFX)) {
     const synth = SFX[name];
     SFX[name] = function (...args) {
-      if (sampleBuffers.has(name)) {
-        if (playSample(name)) return;
-      }
+      if (audioMuted || audioBroken) return;
+      if (soundBank?.play(name, name === "punch" ? args[0] ?? 1 : 1)) return;
       return synth.apply(this, args);
     };
   }
 }
 
 async function loadSamples() {
-  if (samplesChecked || !initAudio()) return;
-  samplesChecked = true;
-  const names = Object.keys(SFX);
-  await Promise.all(names.map(async (name) => {
-    for (const ext of SAMPLE_EXT) {
-      try {
-        const res = await fetch(`${SAMPLE_DIR}${name}${ext}`);
-        if (!res.ok) continue;
-        const bytes = await res.arrayBuffer();
-        const buf = await audioCtx.decodeAudioData(bytes);
-        sampleBuffers.set(name, buf);
-        return;
-      } catch (_) { /* 沒有這個檔就繼續試下一個副檔名 */ }
-    }
-  }));
-  if (sampleBuffers.size) {
-    console.info(`[音效] 載入 ${sampleBuffers.size} 個錄音檔，其餘使用合成`);
-  }
+  if (!soundBank || !initAudio()) return;
+  await soundBank.load(audioCtx, masterGain);
 }
 
 function toggleMute() {
   audioMuted = !audioMuted;
+  if (audioMuted) soundBank?.stopAll();
   if (audioCtx && masterGain) {
     masterGain.gain.setTargetAtTime(audioMuted ? 0 : MASTER_VOL, audioCtx.currentTime, 0.02);
   }
@@ -1320,7 +1284,7 @@ const classes = {
         tag: "抽牌",
         tone: "draw",
         description: "直接抽兩張新卡，補充拳路。",
-        sfx: () => SFX.drawCard(),
+        sfx: () => SFX.breathing(),
         instant: true,
         target: () => ({ mode: "none", cells: [] }),
         cast(game) {
@@ -1355,7 +1319,7 @@ const classes = {
               const cells = crossCells(this.side, this.col, this.row);
               addCrossBurst(cells, this.color);
               if (enemyInsideCells(cells)) {
-                hitEnemyWithSkill(92, { color: this.color, forceCrit: true, big: true });
+                hitEnemyWithSkill(92, { color: this.color, forceCrit: true, big: true, silent: true });
               }
             }
           });
@@ -1795,9 +1759,12 @@ function redeemStoredCharge() {
 
 function hitEnemyWithSkill(baseDamage, options = {}) {
   const combo = options.combo && state.enemy.airborne > 0;
-  if (state.phase === "playing") {
+  if (state.phase === "playing" && !options.silent) {
     if (combo) SFX.launcher();
     else if (options.sfx) options.sfx();
+    else if (selectedClass === "swordsman") SFX.swordImpact();
+    else if (selectedClass === "tangmen") SFX.dartImpact();
+    else if (selectedClass === "boxer") SFX.punch(options.big ? 1.2 : 1);
     else if (options.kind === "basic") SFX.hitLight();
     else SFX.hitHeavy();
   }
@@ -1865,7 +1832,7 @@ function updateBoxerStrike(dt) {
       addPunchHitEffect();
       if (state.phase === "playing") state.message = "崩山突：命中";
     } else {
-      noise({ dur: 0.13, vol: 0.16, type: "bandpass", freq: 620, freqEnd: 1900, q: 0.8, wet: 0.2 });
+      SFX.punchSwing();
       state.message = "崩山突：落空";
     }
   }
@@ -1984,6 +1951,7 @@ function applyEnemyDamage(baseDamage, { kind = "skill", forceCrit = false, big =
   const pos = enemyVisualPosition();
   addDamageNumber(pos.x, pos.y - 72, damage, { kind, big: big || crit });
   if (state.enemy.hp <= 0 && state.phase === "playing") {
+    soundBank?.stopAll();
     state.phase = "win";
     state.player.aiming = null;
     state.message = "勝利：模板完成，可以開始加關卡與卡池";
@@ -2038,6 +2006,7 @@ function damagePlayer(amount) {
     state.phase = "lose";
     state.player.aiming = null;
     state.message = "戰敗：按重新開始再試一次";
+    soundBank?.stopAll();
     SFX.defeat();
     syncPauseButton();
     renderHand();
@@ -2523,6 +2492,7 @@ function updateEnemySpecial(enemy, dt) {
   if (enemy.special.timer > 0) return;
 
   if (enemy.special.type === "waveSweep") {
+    SFX.waveSweep();
     const target = enemy.special.path[enemy.special.step];
     addColumnTelegraph(
       target.side,
@@ -2585,8 +2555,7 @@ function updateProjectiles(dt) {
       if (Math.hypot(projectile.x - enemyCenter.x, projectile.y - (enemyCenter.y - 18)) < 35) {
         projectile.dead = true;
         if (projectile.shape === "swordQi") SFX.swordImpact();
-        else if (projectile.hitKind === "skill") SFX.hitHeavy();
-        else SFX.hitLight();
+        else SFX.dartImpact();
         applyEnemyDamage(projectile.damage, { kind: projectile.hitKind || "basic" });
         if (projectile.chargeOnHit) gainCharge(projectile.chargeOnHit);
         if (projectile.onHit) projectile.onHit();
@@ -2619,14 +2588,14 @@ function updateEffects(dt) {
         effect.tickTimer += 0.2;
         SFX.channelTick();
         if (enemyOnCell(effect)) {
-          hitEnemyWithSkill(14, { color: effect.color });
+          hitEnemyWithSkill(14, { color: effect.color, silent: true });
         }
       }
       if (!effect.finisherDone && effect.time <= 0.2) {
         effect.finisherDone = true;
         SFX.channelFinish();
         if (enemyOnCell(effect)) {
-          hitEnemyWithSkill(48, { color: "#f0d692", big: true });
+          hitEnemyWithSkill(48, { color: "#f0d692", big: true, silent: true });
           state.message = "百裂崩拳收尾重擊命中";
         }
       }
@@ -5442,12 +5411,14 @@ function togglePause() {
   paused = !paused;
   keys.clear();
   touchStart = null;
+  soundBank?.stopAll();
   SFX.pause();
   syncPauseButton();
   renderHand();
 }
 
 function restartGame() {
+  soundBank?.stopAll();
   state = createInitialState();
   paused = false;
   lastHudCache.charge = -1;
@@ -5531,6 +5502,7 @@ syncMuteButton();
 installSampleOverrides();
 // 只有在 http(s) 下才去抓錄音檔；用 file:// 直接開會被 CORS 擋，沒必要噴一堆錯誤
 if (location.protocol === "http:" || location.protocol === "https:") {
+  soundBank?.preload();
   window.addEventListener("pointerdown", () => loadSamples(), { once: true });
   window.addEventListener("keydown", () => loadSamples(), { once: true });
 }

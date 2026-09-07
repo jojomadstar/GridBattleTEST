@@ -1,39 +1,42 @@
-# 放真實音效檔的地方
+# Combat Sound Bank
 
-合成音效做不出真正的鋼鐵撞擊與肉身打擊 —— 那需要錄音。
-把音檔放進這個資料夾，檔名與音效名稱相同即可，程式會自動改用錄音，
-沒有的就繼續用合成，不需要改任何程式碼。
+Original procedural Foley generated for this project, not third-party recordings.
+46 events / 72 stereo PCM WAV files, 44.1 kHz / 16 bit, approximately 5.76 MiB.
 
-支援 `.wav` / `.ogg` / `.mp3`（依此順序尋找）。
+## Regenerate
 
-## 最值得優先替換的（影響最大）
+```sh
+node scripts/generate-sounds.cjs
+node tests/combat-audio.test.cjs
+```
 
-| 檔名 | 內容 |
+The generator writes every WAV and `manifest.js`. Edit recipes in the generator,
+not the generated manifest. Change its `VERSION` and the script query strings in
+`index.html` when publishing a replacement bank to invalidate browser caches.
+
+## Sound Families
+
+| Family | Events |
 |---|---|
-| `swordImpact.wav` | 刀劍砍中的金屬撞擊 |
-| `swordSwing.wav` | 揮劍破空 |
-| `punch.wav` | 拳頭打中身體的悶響 |
-| `dragonBurst.wav` | 爆炸 |
-| `hitHeavy.wav` | 通用重擊命中 |
-| `hitLight.wav` | 通用輕擊命中 |
-| `playerHurt.wav` | 玩家受擊 |
-| `enemyCleave.wav` | 敵人重斬 |
+| Hidden weapons | dartThrow, dartImpact, nailThrow, machineBox, needleRain |
+| Sword | swordSwing, swordImpact, swordBeam, crossCut, thrust, counterStance, counterHit |
+| Fist | boxerDash, punchSwing, punch, palmPush, dragonPull, meridianLock |
+| Channel / ultimate | channelStart, channelTick, channelFinish, dragonCharge, dragonBurst |
+| Support | silkArmor, breathing, drawCard |
+| Damage accents | hitLight, hitHeavy, critAccent, launcher, playerHurt, shieldBlock |
+| Enemy | enemyShot, enemyTelegraph, teleport, enemyCleave, fieldOmen, tileBurst, waveSweep, dartVolley, counterBurst |
+| Interface | aimOn, aimOff, pause, victory, defeat |
 
-## 全部可替換的名稱
+Repeated impacts have three distinct generated variants. Charge cues retain fixed
+playback speed. Short early reflections are baked in; samples bypass the legacy
+long reverb. The runtime limits overlapping voices and merges same-frame tile bursts.
 
-dartThrow, nailThrow, machineBox, silkArmor, needleRain,
-swordSwing, swordImpact, swordBeam, crossCut, thrust, counterStance, counterHit,
-punch, palmPush, dragonPull, meridianLock, channelStart, channelTick, channelFinish,
-dragonCharge, dragonBurst,
-hitLight, hitHeavy, critAccent, launcher,
-enemyShot, enemyTelegraph, teleport, enemyCleave, fieldOmen, tileBurst, dartVolley, counterBurst,
-playerHurt, shieldBlock, drawCard, aimOn, aimOff, pause, victory, defeat
+## Playback
 
-## 注意
+HTTP(S) pages prefetch the bank with four concurrent downloads. The first touch or
+key press unlocks Web Audio and decodes the bank. Missing files or `file://` pages
+retain the legacy synthesis fallback. The sound button preserves the mute preference.
+Pause, restart, defeat and victory stop remaining sample voices.
 
-- 檔案要修剪掉開頭的靜音，否則打擊會有延遲感
-- 建議 44.1kHz，音量峰值正規化到 -3dB 左右
-- **用 `file://` 直接開網頁時不會載入錄音**（瀏覽器 CORS 限制），
-  要用本機伺服器，例如 `python3 -m http.server`
-- 免費授權素材可在 freesound.org、Sonniss GDC bundle 等處取得，
-  注意授權條款
+All project decisions, verification history and deployment status live in
+[PROJECT.md](../PROJECT.md), not here.
