@@ -9,10 +9,10 @@
 - 這是參考 One Step From Eden 的即時格子戰鬥卡牌原型，以普攻命中集氣、抽牌、施放技能為核心。
 - 目前保留武俠水墨場景，用原生 Canvas 2D 畫角色與戰鬥；不要自行改用 Three.js 或生成貼圖。
 - 拳師「同一橫列才鎖定、瞬移到敵人左格出拳、回原位、命中集氣 90」已於 2026-09-05 隨 `e66bacf` 部署。
-- 最新已驗證的遊戲版本為 `e66bacf`：Pages 工作成功，六個遊戲／預覽檔案與本機一致；後續文件提交不改動遊戲程式。
+- 最新已驗證的遊戲版本為 `ccc7dc2`（2026-09-06 全音效版）：Pages 工作成功，72 個 WAV 與五個程式／文件檔案均與本機一致；後續文件提交不改動遊戲程式。
 - 使用者已要求本批上傳；共用文件與兩份原文封存一併備份至 GitHub，後續改動仍不自動推送。
 - 開工先看 `git status`、本節、相關規格與實際函式；結束時更新本文件的現況、測試及部署狀態。
-- 2026-09-06 已完成全音效重製：46 個事件、72 個原創程序生成 WAV，待本次部署驗證；使用者明確要求測完直接上傳，不需再確認。玩法與傷害數值不變。
+- 2026-09-06 已完成並部署全音效重製：46 個事件、72 個原創程序生成 WAV；依使用者要求測完直接上傳，已驗證線上檔案。玩法與傷害數值不變。
 
 ## 2. 共同維護約定
 
@@ -174,7 +174,8 @@ git diff --check
 - 倉庫：<https://github.com/jojomadstar/GridBattleTEST>。
 - 分享網址：<https://jojomadstar.github.io/GridBattleTEST/>；預覽：<https://jojomadstar.github.io/GridBattleTEST/character-preview.html>。
 - GitHub Pages 從 `main` 根目錄發佈，純靜態檔案；本機開啟 HTML 不代表網路已更新。
-- 2026-09-06 全音效版：已通過本機測試，使用者要求直接發佈；部署結果待本次上傳後核對。發佈前遠端為 `43af7a2`。
+- 2026-09-06 全音效版 `ccc7dc2` 已部署：[Pages 工作 34074275501](https://github.com/jojomadstar/GridBattleTEST/actions/runs/34074275501) 成功；72 個線上 WAV 的 SHA-256 與本機一致，`index.html`、`game.js`、`combat-audio.js`、`sounds/manifest.js`、當時的 `PROJECT.md` 內容亦一致。此驗證後只追加部署紀錄，不改遊戲／音檔。
+- 音效重製前版 `43af7a2` 保留於 `codex/backup-before-audio-20260906`；未採用貼圖與私人設定未上傳。
 - 2026-09-05 已發佈遊戲版本 `e66bacf`，包含拳師普攻／90 集氣、回歸測試與統整文件；[Pages 工作 33984507595](https://github.com/jojomadstar/GridBattleTEST/actions/runs/33984507595) 成功。線上六個遊戲／預覽檔案、兩個模型入口與兩份封存均回應 HTTP 200 且內容一致。
 - 發佈前的 `c89782e` 已保留在 `codex/backup-before-boxer-handoff-c89782e`；更早的 `a5f1550` 仍保留在 `codex/backup-before-canvas-art-a5f1550`。
 - 此部署紀錄與 Claude 新增的接手紀錄以文件專用後續提交保存，不更動 `e66bacf` 的遊戲內容。
